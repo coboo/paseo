@@ -1,0 +1,6 @@
+{
+  "source_interface": "index_global_hist_sina(日经225指数)",
+  "adjust": "无（指数）",
+  "fetch_date": "2026-09-09",
+  "note": "日经225，日元计价；本币计价；index_us_stock_sina 无此指数，新浪环球兜底（无成交额、历史仅约 4 年）"
+}

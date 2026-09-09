@@ -1,0 +1,6 @@
+{
+  "source_interface": "bond_china_yield(中债中短期票据收益率曲线AAA)",
+  "adjust": "不适用",
+  "fetch_date": "2026-09-09",
+  "note": "中债中短期票据收益率曲线 AAA(3Y/10Y)；单位 %,工作日频率;AAA 利差为高收益利差代理"
+}

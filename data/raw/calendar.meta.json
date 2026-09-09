@@ -1,0 +1,6 @@
+{
+  "source_interface": "tool_trade_date_hist_sina",
+  "adjust": "不适用",
+  "fetch_date": "2026-09-09",
+  "note": "A股交易日历"
+}

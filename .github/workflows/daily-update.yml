@@ -1,0 +1,39 @@
+# 每日数据保鲜：A股收盘后（UTC 9:00 ≈ 北京时间 17:00）跑增量更新 + 评级快照，
+# 有数据变化就 commit push，Streamlit Cloud 检测到 push 自动重新部署。
+# 东财在 runner 上可能间歇不可达——兜底链（新浪/腾讯）会接管，与 PROGRESS.md 记录的
+# 本机行为一致；当天全挂则 update 空转、无 diff 不 commit，不制造空提交。
+name: daily-data-update
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:      # 允许手动触发（Actions 页面点 Run workflow）
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"    # pyproject 钉死 >=3.12,<3.13
+
+      - name: 安装依赖
+        run: uv sync
+
+      - name: 增量更新数据
+        run: uv run python -m data_module.update
+
+      - name: 每日评级快照
+        run: PYTHONPATH=src uv run python -m metrics.snapshot
+
+      - name: 提交并推送（无变化则跳过）
+        run: |
+          git config user.name "data-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet && echo "无数据变化，跳过提交" || {
+            git commit -m "daily data update $(date +%F)"
+            git push
+          }

@@ -1,0 +1,6 @@
+{
+  "source_interface": "fund_etf_fund_info_em(159545)",
+  "adjust": "基金净值",
+  "fetch_date": "2026-09-09",
+  "note": "恒生红利低波，159545 净值兜底；HSHYLV 无可用指数接口，用 159545 净值兜底（净值天然无溢价；历史仅覆盖基金成立后）"
+}

@@ -1,0 +1,6 @@
+{
+  "source_interface": "bond_treasury_index_cbond(财富,7-10Y)",
+  "adjust": "不适用",
+  "fetch_date": "2026-09-09",
+  "note": "中债国债财富指数 7-10Y；替代设计文档的 bond_china_close_return（该接口已失效）"
+}

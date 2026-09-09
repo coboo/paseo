@@ -1,0 +1,6 @@
+{
+  "source_interface": "stock_index_pb_lg(中证500)",
+  "adjust": "不适用",
+  "fetch_date": "2026-09-09",
+  "note": "中证500 PB；funddb 接口已下线，乐咕兜底"
+}
