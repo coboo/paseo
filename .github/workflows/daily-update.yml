@@ -35,5 +35,7 @@ jobs:
           git add data/
           git diff --cached --quiet && echo "无数据变化，跳过提交" || {
             git commit -m "daily data update $(date +%F)"
+            # 运行期间若有人从本地 push 过（非快进会拒推），先 rebase 再推
+            git pull --rebase origin main
             git push
           }
