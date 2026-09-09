@@ -20,7 +20,8 @@
 - 新增 `requirements.txt`：`uv export --no-dev` 生成（117 包全 hash 锁定），**已移除 `-e .`**（可编辑安装在云上易出问题，导入已由 sys.path 解决）
 - 回归：`test_frontend_alignment.py` 全绿（仪表盘双口径/全卡片/浏览器/组件）
 - **落地（2026-09-09 收工）**：`.gitignore`（排除 .venv/.DS_Store/__pycache__）+ `.github/workflows/daily-update.yml`（UTC 9:00 ≈ 北京时间 17:00 跑 update+snapshot，无 diff 不提交）+ git 建仓，191 文件首批提交（data/ reports/ 入库约 11MB）
-- 待办（用户操作）：GitHub 建私有仓库 → 推送 → share.streamlit.io 建 app（main file `app/paseo.py`，Python 3.12）→ 验证 Actions 定时任务跑通
+- **已推送 GitHub**：github.com/coboo/paseo（私有仓库，main 分支；gh CLI 登录，token 含 workflow scope——推 workflow 文件必需）
+- 待办（用户操作）：share.streamlit.io 建 app（main file `app/paseo.py`，Python 3.12）→ 验证 Actions 定时任务跑通
 
 ## 第 1 步完成情况（2026-08-17）
 
