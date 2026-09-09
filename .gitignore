@@ -2,3 +2,11 @@
 __pycache__/
 .DS_Store
 *.pyc
+
+# 设计文档仅保留在本地，不进公开仓库（部署不需要，含个人研究过程）
+AGENTS.md
+DESIGN.md
+PROGRESS.md
+架构说明.md
+指数ETF量化系统设计方案.md
+CMV模型复刻清单.md
