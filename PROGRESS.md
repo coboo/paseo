@@ -19,7 +19,8 @@
 - `app/valuation_dashboard.py` 补 `sys.path.insert(0, ...parents[1]/"src")`——此前 `from metrics import ...` 依赖 uv 把 src 装进 venv，云上没这一步（faber_strategy.py 早就是此模式）；其他页面无 src 包直引，无需改
 - 新增 `requirements.txt`：`uv export --no-dev` 生成（117 包全 hash 锁定），**已移除 `-e .`**（可编辑安装在云上易出问题，导入已由 sys.path 解决）
 - 回归：`test_frontend_alignment.py` 全绿（仪表盘双口径/全卡片/浏览器/组件）
-- 待办（用户操作）：`git init` + .gitignore（.venv/.DS_Store/__pycache__）→ 推 GitHub → share.streamlit.io 建 app（main file `app/paseo.py`，Python 3.12）→ GitHub Actions 每日 update+snapshot 自动 commit push 保鲜（workflow 骨架已在会话中给出）
+- **落地（2026-09-09 收工）**：`.gitignore`（排除 .venv/.DS_Store/__pycache__）+ `.github/workflows/daily-update.yml`（UTC 9:00 ≈ 北京时间 17:00 跑 update+snapshot，无 diff 不提交）+ git 建仓，191 文件首批提交（data/ reports/ 入库约 11MB）
+- 待办（用户操作）：GitHub 建私有仓库 → 推送 → share.streamlit.io 建 app（main file `app/paseo.py`，Python 3.12）→ 验证 Actions 定时任务跑通
 
 ## 第 1 步完成情况（2026-08-17）
 
