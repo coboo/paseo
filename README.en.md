@@ -11,11 +11,23 @@ Valuation dashboard · Tactical strategy live tracking · Market monitor · Rigo
 [![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-baiyunshan.streamlit.app-ff4b4b)](https://baiyunshan.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.x-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Data](https://img.shields.io/badge/Data-updated_daily-0ca30c)](#-data-pipeline)
+[![Data](https://img.shields.io/badge/Data-updated_daily-0ca30c)](#-tech-stack)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 </div>
 
 ---
+
+## Screenshots
+
+<div align="center">
+<img src="docs/screenshots/market_monitor.png" alt="Market monitor: 12 indices + 16 ETFs, TD Setup highlights and QDII premium alerts" width="800">
+<p><em>📡 Market Monitor — realtime quote board · TD Setup on daily/weekly/monthly (tinted at ≥7, deepened at 9) · QDII premium alerts beyond ±3%</em></p>
+<img src="docs/screenshots/valuation_dashboard.png" alt="Valuation dashboard: composite score with 5-tier rating" width="800">
+<p><em>📈 Valuation Dashboard — 14-model composite score · 5-tier rating · IC validation at the bottom (3-yr rank IC −0.72)</em></p>
+<img src="docs/screenshots/faber_strategy.png" alt="Faber strategy live page" width="800">
+<p><em>🎯 Faber Strategy (live) — current holdings · distance to MA · next rebalance · signal/execution dual-layer NAV</em></p>
+</div>
 
 ## What is this
 

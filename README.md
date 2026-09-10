@@ -11,11 +11,23 @@
 [![在线演示](https://img.shields.io/badge/🚀_在线演示-baiyunshan.streamlit.app-ff4b4b)](https://baiyunshan.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.x-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![数据](https://img.shields.io/badge/数据-每日自动更新-0ca30c)](#-数据管线)
+[![数据](https://img.shields.io/badge/数据-每日自动更新-0ca30c)](#-技术栈)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 </div>
 
 ---
+
+## 页面预览
+
+<div align="center">
+<img src="docs/screenshots/market_monitor.png" alt="行情监控：12 指数 + 16 ETF 报价板，九转高亮与 QDII 溢价警示" width="800">
+<p><em>📡 行情监控 —— 实时报价板 · 神奇九转日/周/月（≥7 淡底、9 加深）· QDII 溢价超 ±3% 警示</em></p>
+<img src="docs/screenshots/valuation_dashboard.png" alt="估值仪表盘：综合分五档评级" width="800">
+<p><em>📈 估值仪表盘 —— 14 模型卡综合分 · 五档评级 · 底部附 IC 自证（3 年秩相关 −0.72）</em></p>
+<img src="docs/screenshots/faber_strategy.png" alt="Faber 策略实盘页" width="800">
+<p><em>🎯 Faber 策略（实盘）—— 当前持仓 · 距均线 · 下次调仓日 · 信号/执行双层净值</em></p>
+</div>
 
 ## 这是什么
 

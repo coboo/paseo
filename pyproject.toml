@@ -20,3 +20,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/data_module", "src/metrics", "src/strategy"]
+
+[dependency-groups]
+dev = [
+    "playwright>=1.62.0",
+]
