@@ -17,6 +17,9 @@
 
 测试开关：环境变量 PASEO_MARKET_OFFLINE=1 时跳过一切网络请求，全部走
 parquet 兜底（AppTest 不依赖实时网络）。
+
+附：神奇九转（TD Setup，td_setup）——指数收盘序列实时计算，盘中用实时价
+作当日动态 bar（td_live 标注，以收盘为准）；不落盘、不进 metrics 层。
 """
 from __future__ import annotations
 
@@ -84,6 +87,8 @@ class MonitorRow:
     etf: Quote
     premium: float | None = None      # QDII 溢价率（百分数），非 QDII 为 None
     nav_date: str | None = None
+    td: tuple[int, int] = (0, 0)      # 指数神奇九转 (方向, 计数)；无指数/无序列 = (0,0)
+    td_live: bool = False             # 九转是否含盘中实时价当日 bar（以收盘为准）
     notes: list[str] = field(default_factory=list)
 
 
@@ -162,25 +167,62 @@ def _em_etf_quotes(codes: list[str]) -> dict[str, Quote]:
     return out
 
 
-# ---------------------------------------------------------------- parquet 兜底
-def _parquet_close(rel: str, name: str, col: str = "close") -> Quote:
-    """读 parquet 最新两行算涨跌幅；文件缺失/不足两行则 price=None。"""
+# ---------------------------------------------------------------- 神奇九转
+def td_setup(closes: pd.Series) -> tuple[int, int]:
+    """神奇九转（DeMark TD Setup）：返回 (方向, 计数)。
+
+    方向 +1 = 上涨计数（收盘 > 4 个交易日前收盘，连续 N 天），
+    方向 -1 = 下跌计数（收盘 < 4 个交易日前收盘，连续 N 天），
+    0 = 当前无序列（条件中断即归零，与行情软件一致）。
+    计数可超 9（第 9 天为"九转"完成信号），展示层自行截断。
+    样本 <5 天返回 (0, 0)。
+    """
+    if len(closes) < 5:
+        return (0, 0)
+    c = closes.values.astype(float)
+    diff = c[4:] - c[:-4]                    # 每日相对 4 日前的涨跌方向
+    sign = 1 if diff[-1] > 0 else (-1 if diff[-1] < 0 else 0)
+    if sign == 0:
+        return (0, 0)
+    n = 0
+    for d in reversed(diff):               # 从最新向回数同方向连续天数
+        if (d > 0) == (sign > 0) and d != 0:
+            n += 1
+        else:
+            break
+    return (sign, n)
+
+
+def td_display(sign: int, n: int, cap: int = 9) -> str:
+    """九转展示文案：'上 6' / '下 9' / '—'；计数超 9 按 9 封顶（九转完成为极值信号）。"""
+    if sign == 0 or n == 0:
+        return "—"
+    return f"{'上' if sign > 0 else '下'} {min(n, cap)}"
+
+
+# ---------------------------------------------------------------- parquet 读取
+def _close_series(rel: str) -> pd.Series:
+    """读 parquet 收盘价序列（date 升序）。au9999 无 close 列，用 bench_pm 基准价口径。"""
+    df = pd.read_parquet(RAW / rel)
+    col = "close" if "close" in df.columns else "bench_pm"
+    s = df[["date", col]].dropna()
+    return pd.Series(s[col].values, index=pd.to_datetime(s["date"]), name=col)
+
+
+def _parquet_close(rel: str, name: str) -> Quote:
+    """最新收盘报价；文件缺失/空则 price=None。"""
     p = RAW / rel
     if not p.exists():
         return Quote(name=name, source="无数据")
-    df = pd.read_parquet(p)
-    if col not in df.columns:  # au9999 为 bench_am/bench_pm 基准价口径
-        col = "bench_pm" if "bench_pm" in df.columns else df.columns[-1]
-    s = df[["date", col]].dropna()
+    s = _close_series(rel)
     if s.empty:
         return Quote(name=name, source="无数据")
-    last = s.iloc[-1]
-    q = Quote(name=name, price=float(last[col]), asof=str(pd.Timestamp(last["date"]).date()),
+    q = Quote(name=name, price=float(s.iloc[-1]), asof=str(s.index[-1].date()),
               source="收盘(parquet)", live=False)
     if len(s) >= 2:
-        prev = float(s.iloc[-2][col])
+        prev = float(s.iloc[-2])
         q.prev_close = prev
-        q.change_pct = (float(last[col]) / prev - 1) * 100 if prev else None
+        q.change_pct = (float(s.iloc[-1]) / prev - 1) * 100 if prev else None
     return q
 
 
@@ -232,12 +274,26 @@ def collect_quotes() -> list[MonitorRow]:
          etf_code, etf_name, etf_pq, qdii) in QUOTE_BOOK:
         # 指数侧：海外/商品/债券无实时源设计（对中国用户即昨夜收盘），直接 EOD
         idx_q = None
+        td, td_live = (0, 0), False
         if idx_name:
             key = idx_sina_code or idx_em_code
             idx_q = live_idx.get(key) if key else None
             if idx_q is None:
                 idx_q = _parquet_close(idx_pq, idx_name)
             idx_q.name = idx_name
+            # 神奇九转：parquet 收盘序列 + 实时价作盘中动态 bar（以收盘为准）
+            try:
+                closes = _close_series(idx_pq)
+                if idx_q.live and idx_q.price:
+                    today = pd.Timestamp.today().normalize()
+                    if closes.index[-1] < today:
+                        closes = pd.concat([closes, pd.Series([idx_q.price], index=[today])])
+                    elif closes.index[-1] == today:
+                        closes.iloc[-1] = idx_q.price
+                    td_live = True
+                td = td_setup(closes)
+            except Exception:
+                pass
         # ETF 侧
         etf_q = live_etf.get(etf_code)
         if etf_q is None:
@@ -251,7 +307,8 @@ def collect_quotes() -> list[MonitorRow]:
                 premium = (etf_q.price / nav[0] - 1) * 100
                 nav_date = nav[1]
         rows.append(MonitorRow(group=group, index=idx_q, etf_code=etf_code,
-                               etf=etf_q, premium=premium, nav_date=nav_date))
+                               etf=etf_q, premium=premium, nav_date=nav_date,
+                               td=td, td_live=td_live))
     return rows
 
 

@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from components import INK, MKT_DOWN, MKT_UP
-from data_module.quotes import collect_quotes, groups_of
+from data_module.quotes import td_display, collect_quotes, groups_of
 
 st.set_page_config(page_title="行情监控", layout="wide")
 
@@ -47,6 +47,15 @@ def _premium_style(v, cap=PREMIUM_CAP):
     return f"color: {INK}"
 
 
+def _td_style(v: str):
+    """九转着色：上涨计数红 / 下跌计数绿（与本页红涨绿跌同语义）；无序列墨色。"""
+    if v.startswith("上"):
+        return f"color: {MKT_UP}"
+    if v.startswith("下"):
+        return f"color: {MKT_DOWN}"
+    return ""
+
+
 def _group_df(rows, with_premium: bool) -> pd.DataFrame:
     recs = []
     for r in rows:
@@ -56,6 +65,7 @@ def _group_df(rows, with_premium: bool) -> pd.DataFrame:
             "指数": r.index.name if r.index else "—",
             "点位": r.index.price if r.index else None,
             "涨跌%": r.index.change_pct if r.index else None,
+            "九转": td_display(*r.td) + ("*" if r.td_live and r.td != (0, 0) else ""),
             "ETF": f"{r.etf.name} {r.etf_code}",
             "最新价": r.etf.price,
             "涨跌% ": r.etf.change_pct,   # 列名去重（Styler subset 按列名）
@@ -75,7 +85,7 @@ def _render_group(title: str, rows, with_premium: bool):
            "最新价": lambda v: "—" if pd.isna(v) else f"{v:,.3f}",
            "涨跌%": lambda v: "—" if pd.isna(v) else f"{v:+.2f}%",
            "涨跌% ": lambda v: "—" if pd.isna(v) else f"{v:+.2f}%"}
-    styler = df.style.map(_chg_color, subset=["涨跌%", "涨跌% "])
+    styler = df.style.map(_chg_color, subset=["涨跌%", "涨跌% "]).map(_td_style, subset=["九转"])
     if with_premium:
         # Styler.format 多次调用后者会整体覆盖前者 → 合并为单次调用
         fmt["溢价%"] = lambda v: "—" if pd.isna(v) else f"{v:+.2f}%" + (" ⚠" if abs(v) > PREMIUM_CAP else "")
@@ -110,6 +120,10 @@ def main():
         "契约：实时价来自新浪/东财现货接口，页面拉取不落盘；海外指数/黄金/债券指数为昨夜收盘"
         "（时区与数据频率所限，属设计而非故障）；QDII 溢价率 = ETF 价 ÷ 最新单位净值（净值滞后 1-2 个交易日，"
         "溢价读数含滞后误差）。Streamlit Cloud 境外节点对国内源不可达时自动降为收盘口径。"
+    )
+    st.caption(
+        "九转（TD Setup）：指数收盘价相对 4 个交易日前的连续同向天数，上 9 / 下 9 为反转提示位；"
+        "带 * 者为盘中实时价参与的动态计数，以当日收盘为准。"
     )
 
 

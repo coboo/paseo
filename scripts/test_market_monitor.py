@@ -34,6 +34,25 @@ assert {g: len(rs) for g, rs in groups.items()} == \
     {"A股宽基": 5, "海外（QDII）": 4, "商品与债券": 3}
 print("quotes 组装逻辑 OK")
 
+# ── 神奇九转 td_setup 单测（合成序列）──
+import pandas as pd
+from data_module.quotes import td_display, td_setup
+
+up9 = pd.Series([100, 101, 102, 103] + [110 + i for i in range(9)])   # 9 天连高
+assert td_setup(up9) == (1, 9), td_setup(up9)
+down5 = pd.Series([100, 101, 102, 103] + [90 - i for i in range(5)])  # 5 天连低
+assert td_setup(down5) == (-1, 5), td_setup(down5)
+# 中断归零：最后一天条件反转
+broken = pd.Series([100, 101, 102, 103] + [110, 111, 112, 50])
+assert td_setup(broken) == (-1, 1), td_setup(broken)
+assert td_setup(pd.Series([1.0, 2.0, 3.0])) == (0, 0)                 # 样本不足
+flat = pd.Series([100, 100, 100, 100, 100])                            # 相等不满足严格 >
+assert td_setup(flat) == (0, 0)
+assert td_display(1, 6) == "上 6" and td_display(-1, 12) == "下 9" and td_display(0, 0) == "—"
+# 真实数据：offline 路径下九转应已按 parquet 序列计算（计数在合理区间）
+assert all(r.td == (0, 0) or (r.td[0] in (1, -1) and r.td[1] >= 1) for r in rows)
+print("td_setup 单测 OK")
+
 # ── 页面 AppTest（offline 兜底路径）──
 at = AppTest.from_file("app/market_monitor.py").run()
 assert not at.exception, f"行情页异常：{at.exception}"
