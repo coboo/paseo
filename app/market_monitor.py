@@ -9,6 +9,7 @@ parquet 收盘兜底，不落盘；每行标注口径（实时时间/收盘日�
 用法：uv run streamlit run app/market_monitor.py
 测试：PASEO_MARKET_OFFLINE=1 强制全兜底路径（AppTest 不依赖实时网络）。
 """
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -47,13 +48,28 @@ def _premium_style(v, cap=PREMIUM_CAP):
     return f"color: {INK}"
 
 
+_TD_CELL_RE = re.compile(r"([上下])\s*(\d+)")
+
+
 def _td_style(v: str):
-    """九转着色：上涨计数红 / 下跌计数绿（与本页红涨绿跌同语义）；无序列墨色。"""
-    if v.startswith("上"):
-        return f"color: {MKT_UP}"
-    if v.startswith("下"):
-        return f"color: {MKT_DOWN}"
-    return ""
+    """九转着色：上红/下绿（与本页红涨绿跌同语义）；无序列墨色。
+
+    计数 ≥7 加同色系淡底 = 临近反转位；9（完成位）底色加深 + 加粗。
+    底色方向与文字同色——不用黄色：本页橙黄已是溢价警示专属语义。
+    """
+    m = _TD_CELL_RE.match(str(v))
+    if not m:
+        return ""
+    up = m.group(1) == "上"
+    n = int(m.group(2))
+    fg = MKT_UP if up else MKT_DOWN
+    if n >= 9:
+        bg = "rgba(208, 59, 59, 0.26)" if up else "rgba(12, 163, 12, 0.26)"
+        return f"color: {fg}; background-color: {bg}; font-weight: 600"
+    if n >= 7:
+        bg = "rgba(208, 59, 59, 0.12)" if up else "rgba(12, 163, 12, 0.12)"
+        return f"color: {fg}; background-color: {bg}"
+    return f"color: {fg}"
 
 
 def _td_cell(r, key: str) -> str:
@@ -133,6 +149,7 @@ def main():
     )
     st.caption(
         "九转（TD Setup）：收盘价相对 4 个周期前的连续同向天数，上 9 / 下 9 为反转提示位；"
+        "计数 ≥7 加淡底提示临近，9（完成位）底色加深加粗；"
         "日/周/月三级别并列（周线=周五收盘、月线=月末收盘口径）；"
         "带 * 者为盘中实时价参与的动态计数，以该级别周期收盘为准。"
     )
