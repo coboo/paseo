@@ -47,7 +47,7 @@ def curve_10y3m(window_years: int | None = 10) -> MetricResult:
         f"{row.spread:+.2f} 个百分点。按{WINDOW_LABELS[window_years]}口径({stats.start} 起 "
         f"{stats.n} 个月,均值 {stats.mean:.2f}、σ {stats.sd:.2f}),当前偏离均值 "
         f"{stats.val_z:+.2f}σ,评级「{RATING_LEVELS[rating]['label']}」——{_TIER_DESC[rating]}。"
-        f"(口径:CMV 原版 10Y−3M;初版曾用 1Y,已修正)"
+        f"(口径:10Y−3M 国债利差)"
     )
     return MetricResult(
         name="收益率曲线(10Y−3M)",

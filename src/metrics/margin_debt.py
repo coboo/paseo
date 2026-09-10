@@ -56,7 +56,7 @@ def margin_debt(window_years: int | None = 10) -> MetricResult:
         f"两融余额 12 个月变化占全 A 总市值 {row.ratio:+.2f}%。按{WINDOW_LABELS[window_years]}口径"
         f"({stats.start} 起 {stats.n} 个月,均值 {stats.mean:.2f}、σ {stats.sd:.2f}),"
         f"当前偏离均值 {stats.val_z:+.2f}σ,评级「{RATING_LEVELS[rating]['label']}」"
-        f"——{_TIER_DESC[rating]}。(口径:CMV Margin Debt,沪深两融合并)"
+        f"——{_TIER_DESC[rating]}。(口径:两融余额变动/总市值,沪深两融合并)"
     )
     return MetricResult(
         name="两融杠杆变化(占市值比)",

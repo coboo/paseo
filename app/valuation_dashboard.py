@@ -85,7 +85,7 @@ MODELS = {
     "margin_debt": "两融杠杆变化（占市值比）",
     "buffett_indicator": "巴菲特指标（总市值/GDP）",
     "credit_spread": "信用利差（中短票AAA−国债）",
-    "pmi_momentum": "PMI 景气动量（对标12M均线）",
+    "pmi_momentum": "PMI 景气动量（对比12M均线）",
     "epu_china": "EPU 政策不确定性（逆向，读数滞后）",
     "sahm_rule": "Sahm 规则（失业率缺口，样本短）",
 }
@@ -231,20 +231,19 @@ with st.sidebar:
     model_key = st.selectbox("估值模型", list(MODELS), format_func=MODELS.get)
     # 窗口选项用显式字符串（'10y'/'full'），避免 None 值在 radio/测试工具里的歧义
     choice = st.radio(
-        "σ 口径窗口（设计文档 σ 方法第 4 条：主口径近 10 年）",
+        "σ 口径窗口（主口径近 10 年，可切全历史对照）",
         ["10y", "full"],
         format_func={"10y": WINDOW_LABELS[10], "full": WINDOW_LABELS[None]}.get,
     )
     window_years = None if choice == "full" else 10
     st.divider()
-    with st.expander("σ 评估方法（CMV 复刻）"):
+    with st.expander("σ 评估方法"):
         st.markdown(
             "1. 月频（月末）采样计算均值/σ\n"
             "2. `估值z = (当前−均值)/σ × 方向`，负=便宜（绿）、正=贵（红）\n"
             "3. 五档：≤−2σ 极低估 / −2~−1σ 低估 / ±1σ 公允 / +1~+2σ 高估 / ≥+2σ 极高估\n"
             "4. 双窗口：主口径近 10 年（利率中枢下移后全历史带过宽）\n"
-            "5. 历史评级一律 expanding 当时视角，≥50 个月样本才输出\n\n"
-            "详见 `指数ETF量化系统设计方案.md` 第六节。"
+            "5. 历史评级一律 expanding 当时视角，≥50 个月样本才输出"
         )
 
 m = _metric_cached(model_key, window_years)
@@ -252,8 +251,7 @@ m = _metric_cached(model_key, window_years)
 st.header(m.name)
 st.caption(
     f"数据截止 {m.updated} · {m.window}口径（{m.stats.start} 起 {m.stats.n} 个月，"
-    f"均值 {m.stats.mean:.2f}、σ {m.stats.sd:.2f}）· 方法对标 "
-    "[CurrentMarketValuation.com](https://www.currentmarketvaluation.com/)"
+    f"均值 {m.stats.mean:.2f}、σ {m.stats.sd:.2f}）"
 )
 
 # 五件套 1+2：当前值大字 + 评级徽章（偏离 σ）

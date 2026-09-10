@@ -60,7 +60,7 @@ def buffett_indicator(window_years: int | None = 10) -> MetricResult:
         f"A股两市总市值相当于近四季度 GDP 之和的 {row.mv_gdp:.0f}%。按{WINDOW_LABELS[window_years]}"
         f"口径({stats.start} 起 {stats.n} 个月,均值 {stats.mean:.0f}、σ {stats.sd:.0f}),"
         f"当前偏离均值 {stats.val_z:+.2f}σ,评级「{RATING_LEVELS[rating]['label']}」"
-        f"——{_TIER_DESC[rating]}。(口径:CMV Buffett Indicator,总市值 2008-01 起)"
+        f"——{_TIER_DESC[rating]}。(口径:总市值/GDP,总市值 2008-01 起)"
     )
     return MetricResult(
         name="巴菲特指标(总市值/GDP)",

@@ -53,10 +53,10 @@ def pmi_momentum(window_years: int | None = 10) -> MetricResult:
         f"按{WINDOW_LABELS[window_years]}口径({stats.start} 起 {stats.n} 个月,均值 "
         f"{stats.mean:.2f}、σ {stats.sd:.2f}),当前偏离均值 {stats.val_z:+.2f}σ,"
         f"评级「{RATING_LEVELS[rating]['label']}」——{_TIER_DESC[rating]}。"
-        f"(口径:LEI 降级替代,PMI 对标 12M 均线)"
+        f"(口径:官方制造业 PMI − 12 个月均线)"
     )
     return MetricResult(
-        name="PMI 景气动量(对标12M均线)",
+        name="PMI 景气动量(对比12M均线)",
         current=float(row["mom"]),
         unit="个百分点",
         sigma=stats.val_z,
