@@ -71,16 +71,16 @@ def _group_df(rows, with_premium: bool) -> pd.DataFrame:
 def _render_group(title: str, rows, with_premium: bool):
     st.subheader(title)
     df = _group_df(rows, with_premium)
-    styler = (df.style
-              .map(_chg_color, subset=["涨跌%", "涨跌% "])
-              .format({"点位": lambda v: "—" if pd.isna(v) else f"{v:,.2f}",
-                       "最新价": lambda v: "—" if pd.isna(v) else f"{v:,.3f}",
-                       "涨跌%": lambda v: "—" if pd.isna(v) else f"{v:+.2f}%",
-                       "涨跌% ": lambda v: "—" if pd.isna(v) else f"{v:+.2f}%"}))
+    fmt = {"点位": lambda v: "—" if pd.isna(v) else f"{v:,.2f}",
+           "最新价": lambda v: "—" if pd.isna(v) else f"{v:,.3f}",
+           "涨跌%": lambda v: "—" if pd.isna(v) else f"{v:+.2f}%",
+           "涨跌% ": lambda v: "—" if pd.isna(v) else f"{v:+.2f}%"}
+    styler = df.style.map(_chg_color, subset=["涨跌%", "涨跌% "])
     if with_premium:
-        styler = (styler
-                  .map(_premium_style, subset=["溢价%"])
-                  .format({"溢价%": lambda v: "—" if pd.isna(v) else f"{v:+.2f}%" + (" ⚠" if abs(v) > PREMIUM_CAP else "")}))
+        # Styler.format 多次调用后者会整体覆盖前者 → 合并为单次调用
+        fmt["溢价%"] = lambda v: "—" if pd.isna(v) else f"{v:+.2f}%" + (" ⚠" if abs(v) > PREMIUM_CAP else "")
+        styler = styler.map(_premium_style, subset=["溢价%"])
+    styler = styler.format(fmt)
     st.dataframe(styler, hide_index=True, width="stretch")
     if with_premium:
         over = [r for r in rows if r.premium is not None and abs(r.premium) > PREMIUM_CAP]
