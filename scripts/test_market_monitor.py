@@ -49,8 +49,24 @@ assert td_setup(pd.Series([1.0, 2.0, 3.0])) == (0, 0)                 # 样本�
 flat = pd.Series([100, 100, 100, 100, 100])                            # 相等不满足严格 >
 assert td_setup(flat) == (0, 0)
 assert td_display(1, 6) == "上 6" and td_display(-1, 12) == "下 9" and td_display(0, 0) == "—"
+
+# td_multi：日/周/月三级别（构造 300 个交易日单边上行序列，月线需 ≥5 根才有读数）
+from data_module.quotes import td_multi
+import numpy as np
+idx = pd.bdate_range("2025-01-01", periods=300)
+up = pd.Series(np.arange(300, dtype=float) + 100, index=idx)
+multi = td_multi(up)
+assert set(multi) == {"D", "W", "M"}
+assert multi["D"][0] == 1 and multi["W"][0] == 1 and multi["M"][0] == 1, multi
+# 周线级别校验：周五收盘序列单调增 → 周计数 = 周数−4
+n_weeks = len(up.resample("W-FRI").last())
+assert multi["W"] == (1, n_weeks - 4), (multi["W"], n_weeks)
+
 # 真实数据：offline 路径下九转应已按 parquet 序列计算（计数在合理区间）
-assert all(r.td == (0, 0) or (r.td[0] in (1, -1) and r.td[1] >= 1) for r in rows)
+for r in rows:
+    for lvl in ("D", "W", "M"):
+        sign, n = r.td.get(lvl, (0, 0))
+        assert (sign, n) == (0, 0) or (sign in (1, -1) and n >= 1), (r.etf_code, lvl, sign, n)
 print("td_setup 单测 OK")
 
 # ── 页面 AppTest（offline 兜底路径）──

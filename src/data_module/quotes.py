@@ -87,7 +87,7 @@ class MonitorRow:
     etf: Quote
     premium: float | None = None      # QDII 溢价率（百分数），非 QDII 为 None
     nav_date: str | None = None
-    td: tuple[int, int] = (0, 0)      # 指数神奇九转 (方向, 计数)；无指数/无序列 = (0,0)
+    td: dict[str, tuple[int, int]] = field(default_factory=dict)  # 日/周/月九转 {"D"/"W"/"M": (方向, 计数)}
     td_live: bool = False             # 九转是否含盘中实时价当日 bar（以收盘为准）
     notes: list[str] = field(default_factory=list)
 
@@ -200,6 +200,17 @@ def td_display(sign: int, n: int, cap: int = 9) -> str:
     return f"{'上' if sign > 0 else '下'} {min(n, cap)}"
 
 
+def td_multi(closes: pd.Series) -> dict[str, tuple[int, int]]:
+    """日/周/月三级别九转。周线=周五收盘（W-FRI），月线=月末收盘，各取该周期最后交易日。
+
+    日频序列含盘中动态 bar 时，重采样自动把它并入当周/当月 bar——三级别
+    盘中值同为动态口径，以各自周期收盘为准。
+    """
+    weekly = closes.resample("W-FRI").last().dropna()
+    monthly = closes.resample("ME").last().dropna()
+    return {"D": td_setup(closes), "W": td_setup(weekly), "M": td_setup(monthly)}
+
+
 # ---------------------------------------------------------------- parquet 读取
 def _close_series(rel: str) -> pd.Series:
     """读 parquet 收盘价序列（date 升序）。au9999 无 close 列，用 bench_pm 基准价口径。"""
@@ -274,14 +285,15 @@ def collect_quotes() -> list[MonitorRow]:
          etf_code, etf_name, etf_pq, qdii) in QUOTE_BOOK:
         # 指数侧：海外/商品/债券无实时源设计（对中国用户即昨夜收盘），直接 EOD
         idx_q = None
-        td, td_live = (0, 0), False
+        td: dict[str, tuple[int, int]] = {}
+        td_live = False
         if idx_name:
             key = idx_sina_code or idx_em_code
             idx_q = live_idx.get(key) if key else None
             if idx_q is None:
                 idx_q = _parquet_close(idx_pq, idx_name)
             idx_q.name = idx_name
-            # 神奇九转：parquet 收盘序列 + 实时价作盘中动态 bar（以收盘为准）
+            # 神奇九转（日/周/月）：parquet 收盘序列 + 实时价作盘中动态 bar（以收盘为准）
             try:
                 closes = _close_series(idx_pq)
                 if idx_q.live and idx_q.price:
@@ -291,7 +303,7 @@ def collect_quotes() -> list[MonitorRow]:
                     elif closes.index[-1] == today:
                         closes.iloc[-1] = idx_q.price
                     td_live = True
-                td = td_setup(closes)
+                td = td_multi(closes)
             except Exception:
                 pass
         # ETF 侧
