@@ -22,8 +22,20 @@ jobs:
       - name: 安装依赖
         run: uv sync
 
-      - name: 增量更新数据
-        run: uv run python -m data_module.update
+      - name: 增量更新数据（部分失败容忍 + 整轮重试）
+        run: |
+          # 东财/csindex 在 runner 上间歇不可达；raw 断点续传，重跑只会补失败项，
+          # 故整轮重试最多 3 次（专治 H30269 这类间歇 502）。
+          # 部分失败不阻断流水线：csindex 两个股息率境外稳定抓不到属预期内（不进任何
+          # 卡片/策略，本机可补），成功的数据集与快照照常提交。
+          ok=0
+          for i in 1 2 3; do
+            if uv run python -m data_module.update; then ok=1; break; fi
+            echo "::warning::第 $i 轮更新存在失败项，60s 后重试（断点续传只补失败项）"
+            sleep 60
+          done
+          [ "$ok" = 1 ] || echo "::warning::三轮后仍有失败项（预期内：csindex 境外不可达），继续快照与提交"
+          exit 0
 
       - name: 每日评级快照
         run: PYTHONPATH=src uv run python -m metrics.snapshot
