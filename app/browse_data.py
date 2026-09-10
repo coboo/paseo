@@ -34,6 +34,10 @@ DATASET_NAMES = {
     "raw/index_daily/index_000852": "中证1000 指数日线",
     "raw/index_daily/index_399006": "创业板指 指数日线",
     "raw/index_daily/index_H30269": "中证红利低波动 指数日线",
+    "raw/index_daily/index_930955": "中证红利低波动100 指数日线",
+    "raw/index_daily/index_931139": "中证消费50 指数日线",
+    "raw/index_daily/index_H30533": "中证海外中国互联网50 指数日线",
+    "raw/index_daily/spdiv50_nav_515450": "标普中国A股红利机会（515450 净值兜底）",
     # 海外指数 / 净值
     "raw/index_global/spx_inx": "标普500 指数（美元）",
     "raw/index_global/ndx_ndx": "纳斯达克100 指数（美元）",
@@ -52,11 +56,16 @@ DATASET_NAMES = {
     "raw/etf_daily/etf_qfq_159545": "159545 恒生红利低波ETF（前复权）",
     "raw/etf_daily/etf_qfq_511260": "511260 十年国债ETF（前复权）",
     "raw/etf_daily/etf_qfq_511360": "511360 短融ETF（前复权）",
+    "raw/etf_daily/etf_qfq_515450": "515450 红利低波50ETF（前复权）",
+    "raw/etf_daily/etf_qfq_159307": "159307 红利低波100ETF（前复权）",
+    "raw/etf_daily/etf_qfq_515650": "515650 消费50ETF（前复权）",
+    "raw/etf_daily/etf_qfq_513050": "513050 中概互联网ETF（前复权）",
     # QDII 净值（溢价过滤器数据源）
     "raw/etf_nav/nav_513500": "513500 标普500ETF 净值",
     "raw/etf_nav/nav_513100": "513100 纳指ETF 净值",
     "raw/etf_nav/nav_513880": "513880 日经225ETF 净值",
     "raw/etf_nav/nav_159545": "159545 恒生红利低波ETF 净值",
+    "raw/etf_nav/nav_513050": "513050 中概互联网ETF 净值",
     # 估值
     "raw/valuation/pe_000300": "沪深300 PE（滚动市盈率）",
     "raw/valuation/pe_000905": "中证500 PE（滚动市盈率）",

@@ -8,7 +8,7 @@
 - A股指数实时：新浪 stock_zh_index_spot_sina 为主（本机/云端实测最稳）；
   H30269 等中证系指数新浪没有 → 东财 stock_zh_index_spot_em(中证系列指数) 补；
   两者都失败 → parquet 收盘兜底。
-- ETF 实时：新浪 hq.sinajs.cn 批量快照为主（12 只全覆盖含 QDII）；
+- ETF 实时：新浪 hq.sinajs.cn 批量快照为主（16 只全覆盖含 QDII）；
   东财 fund_etf_spot_em 为备；再败 → etf_qfq 收盘兜底（前复权价，口径注明）。
 - 海外指数/黄金/债券指数：对中国用户本来就是昨夜收盘，直接 parquet EOD。
 - QDII 溢价率 = ETF 实时价 ÷ 最新单位净值 − 1（溢价是时点比率，price 与
@@ -48,6 +48,12 @@ QUOTE_BOOK = [
      "159915", "创业板ETF", "etf_daily/etf_qfq_159915.parquet", False),
     ("A股宽基", "红利低波", None, "H30269", "index_daily/index_H30269.parquet",
      "563020", "红利低波ETF", "etf_daily/etf_qfq_563020.parquet", False),
+    ("A股宽基", "红利低波50", None, None, "index_daily/spdiv50_nav_515450.parquet",
+     "515450", "红利低波50ETF", "etf_daily/etf_qfq_515450.parquet", False),
+    ("A股宽基", "红利低波100", None, "930955", "index_daily/index_930955.parquet",
+     "159307", "红利低波100ETF", "etf_daily/etf_qfq_159307.parquet", False),
+    ("A股宽基", "消费50", None, "931139", "index_daily/index_931139.parquet",
+     "515650", "消费50ETF", "etf_daily/etf_qfq_515650.parquet", False),
     ("海外（QDII）", "标普500", None, None, "index_global/spx_inx.parquet",
      "513500", "标普500ETF", "etf_daily/etf_qfq_513500.parquet", True),
     ("海外（QDII）", "纳指100", None, None, "index_global/ndx_ndx.parquet",
@@ -56,6 +62,8 @@ QUOTE_BOOK = [
      "513880", "日经225ETF", "etf_daily/etf_qfq_513880.parquet", True),
     ("海外（QDII）", "恒生红利低波", None, None, "index_global/hshylv_nav_159545.parquet",
      "159545", "恒生红利低波ETF", "etf_daily/etf_qfq_159545.parquet", True),
+    ("海外（QDII）", "中概互联网50", None, "H30533", "index_daily/index_H30533.parquet",
+     "513050", "中概互联网ETF", "etf_daily/etf_qfq_513050.parquet", True),
     ("商品与债券", "黄金 AU9999", None, None, "gold/au9999_sge.parquet",
      "518880", "黄金ETF", "etf_daily/etf_qfq_518880.parquet", False),
     ("商品与债券", "国债财富7-10Y", None, None, "bond_index/cbond_treasury_wealth_7_10y.parquet",
@@ -128,7 +136,7 @@ def _em_index_quotes(codes: list[str]) -> dict[str, Quote]:
 
 
 def _sina_etf_quotes(codes: list[str]) -> dict[str, Quote]:
-    """新浪 hq.sinajs.cn ETF 批量快照（12 只全覆盖）。codes 为 510310 形式。"""
+    """新浪 hq.sinajs.cn ETF 批量快照（16 只全覆盖）。codes 为 510310 形式。"""
     import requests
 
     pref = ["sh" + c if c.startswith("5") else "sz" + c for c in codes]

@@ -2,7 +2,7 @@
 
 - 页面：PASEO_MARKET_OFFLINE=1 强制全 parquet 兜底（测试不依赖实时网络），
   断言三组分表 + 兜底口径标注 + 无异常
-- quotes.collect_quotes：offline 路径 12 行齐全、QDII 溢价用单位净值、
+- quotes.collect_quotes：offline 路径 16 行齐全、QDII 溢价用单位净值、
   511360 无指数行 index=None
 """
 import os
@@ -18,20 +18,20 @@ from streamlit.testing.v1 import AppTest
 from data_module.quotes import collect_quotes, groups_of
 
 rows = collect_quotes()
-assert len(rows) == 12, f"报价簿 12 行，实得 {len(rows)}"
+assert len(rows) == 16, f"报价簿 16 行，实得 {len(rows)}"
 assert all(not r.etf.live for r in rows), "offline 模式不得有实时价"
 assert all(r.etf.price for r in rows), "有 ETF 兜底失败"
 assert all(r.index is None or not r.index.live for r in rows)
 assert [r for r in rows if r.index is None][0].etf_code == "511360", "仅 511360 无指数"
 
 premiums = {r.etf_code: r.premium for r in rows if r.premium is not None}
-assert set(premiums) == {"513500", "513100", "513880", "159545"}, "QDII 溢价行不齐"
+assert set(premiums) == {"513500", "513100", "513880", "159545", "513050"}, "QDII 溢价行不齐"
 assert all(abs(v) < 30 for v in premiums.values()), \
     f"溢价超 ±30% 说明误用累计净值（拆分断崖）: {premiums}"
 
 groups = groups_of(rows)
 assert {g: len(rs) for g, rs in groups.items()} == \
-    {"A股宽基": 5, "海外（QDII）": 4, "商品与债券": 3}
+    {"A股宽基": 8, "海外（QDII）": 5, "商品与债券": 3}
 print("quotes 组装逻辑 OK")
 
 # ── 神奇九转 td_setup 单测（合成序列）──

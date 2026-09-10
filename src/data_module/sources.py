@@ -94,7 +94,8 @@ def _fetch_index_daily(code: str) -> FetchResult:
                            adjust="无（指数）", note="东财接口不可用，中证官网兜底")
 
     steps = [("em", primary)]
-    steps.append(("csindex", fb_csindex) if code.startswith("H") else ("sina", fb_sina))
+    # 中证系指数（H30269/H30533、93xxxx 等）新浪没有 → 中证官网兜底
+    steps.append(("csindex", fb_csindex) if code.startswith(("H", "9")) else ("sina", fb_sina))
     return _try_chain(steps)
 
 
@@ -147,6 +148,18 @@ def _fetch_hshylv() -> FetchResult:
         return FetchResult(_std(df, col_map, ["date", "close", "acc_nav"]),
                            source="fund_etf_fund_info_em(159545)", adjust="基金净值",
                            note="HSHYLV 无可用指数接口，用 159545 净值兜底（净值天然无溢价；历史仅覆盖基金成立后）")
+    return _try_chain([("nav", fn)])
+
+
+def _fetch_spdiv50() -> FetchResult:
+    """标普中国A股红利机会指数（515450 标的）：标普指数无公开日线接口，用 515450 净值兜底。"""
+    def fn() -> FetchResult:
+        df = retry_fetch(ak.fund_etf_fund_info_em, fund="515450",
+                         start_date="20000101", end_date=TODAY)
+        col_map = {"净值日期": "date", "单位净值": "close", "累计净值": "acc_nav"}
+        return FetchResult(_std(df, col_map, ["date", "close", "acc_nav"]),
+                           source="fund_etf_fund_info_em(515450)", adjust="基金净值",
+                           note="标普红利机会指数无可用指数接口，用 515450 净值兜底（与 HSHYLV 同律；历史仅覆盖基金成立后）")
     return _try_chain([("nav", fn)])
 
 
@@ -518,10 +531,12 @@ def _fetch_gdp() -> FetchResult:
 
 
 # ================================================================ 注册表
-_A_INDEX = ["000300", "000905", "000852", "399006", "H30269"]
+_A_INDEX = ["000300", "000905", "000852", "399006", "H30269",
+            "930955", "931139", "H30533"]
 _ETFS = ["510310", "510580", "159633", "159915", "563020", "513500",
-         "513100", "513880", "518880", "159545", "511260", "511360"]
-_QDII = ["513500", "513100", "513880", "159545"]
+         "513100", "513880", "518880", "159545", "511260", "511360",
+         "515450", "159307", "515650", "513050"]
+_QDII = ["513500", "513100", "513880", "159545", "513050"]
 
 DATASETS: list[Dataset] = [
     # A股指数日线 ×5
@@ -538,10 +553,12 @@ DATASETS: list[Dataset] = [
             "日经225，日元计价"),
     Dataset("hshylv", "index_global/hshylv_nav_159545.parquet",
             _fetch_hshylv, "恒生红利低波，159545 净值兜底"),
-    # ETF 前复权日线 ×12
+    Dataset("spdiv50", "index_daily/spdiv50_nav_515450.parquet",
+            _fetch_spdiv50, "标普中国A股红利机会，515450 净值兜底"),
+    # ETF 前复权日线 ×16
     *[Dataset(f"etf_qfq_{c}", f"etf_daily/etf_qfq_{c}.parquet",
               lambda c=c: _fetch_etf_qfq(c), "ETF 前复权日线") for c in _ETFS],
-    # QDII 净值 ×4
+    # QDII 净值 ×5
     *[Dataset(f"nav_{c}", f"etf_nav/nav_{c}.parquet",
               lambda c=c: _fetch_etf_nav(c), "QDII 净值") for c in _QDII],
     # 估值：PE/PB（乐咕）+ 股息率快照（中证官网）+ 全A股息率
