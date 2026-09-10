@@ -4,6 +4,10 @@
 # 本机行为一致；当天全挂则 update 空转、无 diff 不 commit，不制造空提交。
 name: daily-data-update
 
+# GITHUB_TOKEN 默认只读，每日数据提交需要写权限（曾因缺此行 push 403）
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: '0 9 * * *'
