@@ -24,6 +24,9 @@ CATEGORICAL = [
 ]
 BLUE = CATEGORICAL[0]
 
+# ── 行情监控页涨跌色（DESIGN.md 行情页限定豁免：红涨绿跌，仅限该页）──
+MKT_UP, MKT_DOWN = "#d03b3b", "#0ca30c"
+
 # ── 极值区 wash（DESIGN.md 3.4：大面积只准 8% 透明度）──
 GREEN_WASH = "rgba(12,163,12,0.08)"   # 极便宜/低估侧
 RED_WASH = "rgba(208,59,59,0.08)"     # 极贵/高估侧

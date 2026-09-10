@@ -15,6 +15,7 @@ st.set_page_config(page_title="paseo · 指数ETF量化系统", page_icon="🧭"
 pages = [
     st.Page(_HERE / "faber_strategy.py", title="🎯 Faber 策略(实盘)", default=True,
             url_path="faber"),
+    st.Page(_HERE / "market_monitor.py", title="📡 行情监控", url_path="market"),
     st.Page(_HERE / "valuation_dashboard.py", title="📈 估值仪表盘", url_path="valuation"),
     st.Page(_HERE / "gem_backtest.py", title="🔬 回测工作台", url_path="backtest"),
     st.Page(_HERE / "browse_data.py", title="🗄 数据浏览器", url_path="data"),
