@@ -1,6 +1,6 @@
 {
   "source_interface": "currency_boc_safe(日元)",
   "adjust": "不适用",
-  "fetch_date": "2026-09-09",
+  "fetch_date": "2026-09-10",
   "note": "日元/人民币；中行牌价中间价/100，每 1 外币兑人民币"
 }

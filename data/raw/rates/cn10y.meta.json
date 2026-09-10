@@ -1,6 +1,6 @@
 {
   "source_interface": "bond_china_yield(中债国债收益率曲线)",
   "adjust": "不适用",
-  "fetch_date": "2026-09-09",
+  "fetch_date": "2026-09-10",
   "note": "中债国债收益率曲线（3M–30Y 全期限）；工作日频率，单位 %，全期限 3M/6M/1Y/3Y/5Y/7Y/10Y/30Y"
 }

@@ -1,6 +1,6 @@
 {
   "source_interface": "index_us_stock_sina(.NDX)",
   "adjust": "无（指数）",
-  "fetch_date": "2026-09-09",
+  "fetch_date": "2026-09-10",
   "note": "纳指100，美元计价；本币计价"
 }

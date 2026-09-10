@@ -1,6 +1,6 @@
 {
   "source_interface": "macro_china_gdp",
   "adjust": "不适用",
-  "fetch_date": "2026-09-09",
+  "fetch_date": "2026-09-10",
   "note": "GDP 季度累计值(亿元)；季度累计值(亿元),滚动四季度求和由卡内完成"
 }

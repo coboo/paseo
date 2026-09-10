@@ -1,6 +1,6 @@
 {
   "source_interface": "datacenter RPT_ECONOMY_STOCK_STATISTICS",
   "adjust": "不适用",
-  "fetch_date": "2026-09-09",
+  "fetch_date": "2026-09-10",
   "note": "A股两市总市值(月度,亿元)；月度,单位亿元;最新月可能为 NaN(未出数)"
 }
