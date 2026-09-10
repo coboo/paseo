@@ -2,6 +2,9 @@
 
 # 🧭 paseo
 
+[![简体中文](https://img.shields.io/badge/语言-简体中文-red)](README.md)
+[![English](https://img.shields.io/badge/Lang-English-blue)](README.en.md)
+
 **面向 A 股个人投资者的指数/ETF 量化系统**
 估值仪表盘 · 择时策略实盘跟踪 · 行情监控 · 严肃回测
 
