@@ -1,6 +1,6 @@
 {
   "source_interface": "fund_etf_fund_info_em(513500)",
   "adjust": "基金净值",
-  "fetch_date": "2026-09-10",
+  "fetch_date": "2026-09-11",
   "note": "QDII 净值；溢价过滤器数据源"
 }

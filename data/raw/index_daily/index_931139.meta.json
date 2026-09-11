@@ -1,6 +1,6 @@
 {
   "source_interface": "stock_zh_index_hist_csindex(931139)",
   "adjust": "无（指数）",
-  "fetch_date": "2026-09-10",
+  "fetch_date": "2026-09-11",
   "note": "A股指数日线；东财接口不可用，中证官网兜底"
 }

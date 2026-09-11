@@ -1,6 +1,6 @@
 {
   "source_interface": "stock_index_pb_lg(沪深300)",
   "adjust": "不适用",
-  "fetch_date": "2026-09-10",
+  "fetch_date": "2026-09-11",
   "note": "沪深300 PB；funddb 接口已下线，乐咕兜底"
 }

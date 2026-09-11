@@ -1,6 +1,6 @@
 {
   "source_interface": "stock_index_pe_lg(中证500)",
   "adjust": "不适用",
-  "fetch_date": "2026-09-10",
+  "fetch_date": "2026-09-11",
   "note": "中证500 PE；funddb 接口已下线，乐咕兜底；pe_ttm=滚动市盈率"
 }
