@@ -1,6 +1,6 @@
 {
   "source_interface": "fund_etf_fund_info_em(515450)",
   "adjust": "基金净值",
-  "fetch_date": "2026-09-11",
+  "fetch_date": "2026-09-12",
   "note": "标普中国A股红利机会，515450 净值兜底；标普红利机会指数无可用指数接口，用 515450 净值兜底（与 HSHYLV 同律；历史仅覆盖基金成立后）"
 }

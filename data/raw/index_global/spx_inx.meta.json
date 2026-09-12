@@ -1,6 +1,6 @@
 {
   "source_interface": "index_us_stock_sina(.INX)",
   "adjust": "无（指数）",
-  "fetch_date": "2026-09-11",
+  "fetch_date": "2026-09-12",
   "note": "标普500，美元计价；本币计价"
 }

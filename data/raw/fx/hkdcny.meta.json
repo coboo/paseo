@@ -1,6 +1,6 @@
 {
   "source_interface": "currency_boc_safe(港元)",
   "adjust": "不适用",
-  "fetch_date": "2026-09-11",
+  "fetch_date": "2026-09-12",
   "note": "港元/人民币；中行牌价中间价/100，每 1 外币兑人民币"
 }
