@@ -10,9 +10,9 @@ B 散点 + Spearman IC / C 极低估事件研究，计算在 src/dividend/forwar
 纯函数层，复刻估值页 IC 自证范式）；159545 样本不足时事件研究显示
 "样本不足，不可外推"提示，不画误导性曲线。
 
-定位诚实声明：本研究未走主项目 walk-forward + holdout 流程（设计文档十二节），
-页面为"估值参考 + 信号观察"，不构成实盘指令；计算全部 @st.cache_data 不落盘
-（AGENTS.md 规则 5）；PASEO_MARKET_OFFLINE=1 时溢价区显示离线兜底提示，
+定位诚实声明：主项目 walk-forward + holdout 终验已完成（设计文档十三节，2026-09-21）——
+WF 样本外通过、holdout 夏普未达 >1 → 维持「信号观察」，死因见页底证据链；
+计算全部 @st.cache_data 不落盘（AGENTS.md 规则 5）；PASEO_MARKET_OFFLINE=1 时溢价区显示离线兜底提示，
 不阻断其余内容（以行情监控页为准）。
 
 用法：uv run streamlit run app/dividend_page.py
@@ -223,7 +223,7 @@ def _event_fig(res: dict, label: str) -> go.Figure:
 
 
 def _evidence_block() -> None:
-    """证据链摘要（实测与裁决分离纪律：walk-forward 未做必须如实标 ❌）。"""
+    """证据链摘要（实测与裁决分离纪律：WF/holdout 实测照登，不粉饰）。"""
     rows = [
         ("因子筛选", "16 候选因子 → 幸存 4 个家族（252 日反转 / 盈利收益率利差 / −PE / 股息率·ERP 分位）；"
          "全样本 IC + expanding 分档单调 + 滚动 ICIR + 2024+ 样本外，四重验证", "✅ 通过"),
@@ -231,9 +231,15 @@ def _evidence_block() -> None:
          "（取值截至前一交易日），权重一个数未改", "✅ 冻结"),
         ("样本外检验", "冻结模型逐周模拟历史预测（2024+，无未来函数）；非重叠抽样后相关仍 p<0.01；"
          "logistic 概率对照全面落败，频率法为最优概率模型", "✅ 通过"),
-        ("主项目 walk-forward + holdout", "未走（研究完成于主项目之外，验证惯例自洽但流程不同）", "❌ 未做"),
-        ("终局裁决", "定位「估值参考 + 信号观察」，不自动成为实盘策略；若未来按此信号实盘，"
-         "须补 walk-forward 终验并独立立项（设计文档十二节）", "⚠️ 观察定位"),
+        ("主项目 walk-forward", "基线 5 验证（设计文档十三节）：训练 5 年/测试 1 年滚动（2020 起），"
+         "网格 18 组 Calmar 机械选参；样本外拼接 2020-01→2025-09：年化 +2.00%、MDD −1.61%"
+         "（簇等权 B&H −16.39%，削减 90%）、夏普 1.06 → 通过线（夏普>1 且削减≥40%）", "✅ 通过"),
+        ("主项目 holdout 终验", "冻结规则 enter=40/exit=70/hyst=0（末段 WF 选参），2025-09-15→2026-09-14 "
+         "untouched 一次：年化 +1.80%、MDD −3.05%（簇 B&H −13.39%，削减 77%）、夏普 0.57 < 1 "
+         "→ 未通过（回撤控制好但收益性不足）", "❌ 未通过"),
+        ("终局裁决", "按十三节处置：holdout 未过 → 保持「信号观察」，死因如实记录"
+         "（holdout 失败但 WF 强，可提请用户裁决——Faber 2026-08-26 先例）；"
+         "复现：PYTHONPATH=src uv run --no-sync python -m dividend.walkforward", "⚠️ 信号观察"),
     ]
     st.table(pd.DataFrame(rows, columns=["检验", "结果摘要", "判"]))
 
@@ -243,7 +249,8 @@ def main() -> None:
     st.caption("四标的打分分位（五档贵贱）+ P(1年收益>0) + 机械操作建议 · "
                "打分 = expanding z × ≤2023 样本内 ICIR 冻结权重 · 纯估值口径回答「贵贱」，"
                "含动量口径回答「赢面」（对照见下表）· "
-               "定位「估值参考 + 信号观察」，未走主项目 walk-forward（证据链与声明见页底）")
+               "定位「信号观察」：主项目 walk-forward 已过、holdout 夏普未达线"
+               "（证据链与声明见页底）")
 
     val = _cards("valuation")
     full = _cards("full")

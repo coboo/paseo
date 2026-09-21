@@ -165,9 +165,10 @@ subs = [s.value for s in at.subheader]
 assert subs[0] == "当前信号状态（纯估值口径）", f"信号区须置顶: {subs}"
 assert "打分 × 后续走势（历史自证）" in subs, "自证区块缺失"
 assert "证据链（全部检验的完整记录）" in subs, "证据链区块缺失"
-# 证据链必须如实标注 walk-forward 未做（实测与裁决分离纪律）
+# 证据链必须如实标注 holdout 未通过与 walk-forward 结果（实测与裁决分离纪律）
 ev_table = at.table[-1].value.to_string()
-assert "未走" in ev_table and "❌" in ev_table, "walk-forward 未做的诚实标注缺失"
+assert "walk-forward" in ev_table and "holdout" in ev_table and "❌" in ev_table, \
+    "WF/holdout 实测的诚实标注缺失"
 print("dividend_page AppTest(offline) OK")
 
 # 自证区块：切换 159545 必须出现"样本不足，不可外推"提示，且不画事件曲线
