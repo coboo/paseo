@@ -1,0 +1,6 @@
+{
+  "source_interface": "bond_zh_us_rate；CSV迁移",
+  "adjust": "不适用",
+  "fetch_date": "2026-09-21",
+  "note": "来自 dividend-research 迁移（存量 CSV 转换，原始文件保留在 dividend-research/data/raw/）"
+}

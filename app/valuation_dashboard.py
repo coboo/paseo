@@ -29,8 +29,10 @@ from components import (
     MUTED,
     RED_WASH,
     base_layout,
-    tier_fill,
-    tier_text,
+    fig_pct_bands,
+    hero_value,
+    rating_badge,
+    tier_bar,
 )
 from metrics import (
     RATING_LEVELS,
@@ -99,6 +101,23 @@ _MODEL_SPECS: dict = {
     "qvix_50etf": (qvix_50etf, qvix_daily, "qvix", "inverse"),
 }
 
+# 红利低波簇打分卡（dividend.cards，独立展示不进综合分——设计文档十二节，
+# 理由同 EPU/Sahm 先例）；入口在页底"红利低波簇"分组，不在主侧栏模型列表
+DIVIDEND_MODELS = {
+    "div_H30269": "红利低波 563020（H30269）打分",
+    "div_930955": "红利低波100 159307（930955）打分",
+    "div_515450": "红利低波50 515450（净值代理）打分",
+    "div_159545": "恒生红利低波 159545（净值代理）打分",
+}
+
+
+@st.cache_data(ttl=3600)
+def _dividend_card(code: str):
+    from dividend.cards import compute_cards
+
+    return compute_cards("valuation")[code]
+
+
 # 历史锚点回验（事后注记为人工判读；估值z 由 expanding 当时视角动态计算）
 ANCHORS = [
     ("2007-10", "六千点泡沫顶", "随后一年指数腰斩"),
@@ -117,6 +136,11 @@ _MODEL_SPECS.update({
     "pmi_momentum": (pmi_momentum, pmi_momentum_monthly, "mom", "inverse"),
     "epu_china": (epu_china, epu_monthly, "epu", "inverse"),
     "sahm_rule": (sahm_rule, sahm_monthly, "gap", "positive"),
+    # 红利低波簇打分卡（纯估值口径；主函数签名为 (window)，这里忽略窗口参数）
+    "div_H30269": (lambda window: _dividend_card("H30269"), None, None, None),
+    "div_930955": (lambda window: _dividend_card("930955"), None, None, None),
+    "div_515450": (lambda window: _dividend_card("515450"), None, None, None),
+    "div_159545": (lambda window: _dividend_card("159545"), None, None, None),
 })
 
 
@@ -199,29 +223,6 @@ def _fig_val_z(ez: pd.Series) -> go.Figure:
     return fig
 
 
-def _tier_bar(m) -> str:
-    """五档红绿灯色条（HTML）：每档 σ 范围 + 色块 + 档名，当前档加粗描边。
-
-    色块呈现色与文字墨/白一律走 components.tier_fill/tier_text（DESIGN.md 3.1
-    表——当前档与非常住档同规则，浅底档用墨字）。
-    """
-    tiers = [(1, "≤ −2σ"), (2, "−2σ ~ −1σ"), (3, "±1σ"), (4, "+1σ ~ +2σ"), (5, "≥ +2σ")]
-    cells = []
-    for r, rng in tiers:
-        active = r == m.rating
-        edge = f"border:3px solid {INK};" if active else "border:3px solid transparent;"
-        mark = "▲ 当前" if active else ""
-        cells.append(
-            f'<div style="flex:1;text-align:center">'
-            f'<div style="font-size:0.78rem;color:{MUTED};margin-bottom:2px">{rng}</div>'
-            f'<div style="background:{tier_fill(r)};{edge}border-radius:8px;padding:8px 0;'
-            f'color:{tier_text(r)};font-weight:600;font-size:0.95rem">{RATING_LEVELS[r]["label"]}</div>'
-            f'<div style="font-size:0.75rem;color:{INK2};height:1.1em;margin-top:2px">{mark}</div>'
-            f"</div>"
-        )
-    return f'<div style="display:flex;gap:8px;margin:6px 0 2px">{"".join(cells)}</div>'
-
-
 # ────────────────────────── 页面 ──────────────────────────
 
 st.set_page_config(page_title="A股估值仪表盘", page_icon="📈", layout="wide")
@@ -257,25 +258,13 @@ st.caption(
 # 五件套 1+2：当前值大字 + 评级徽章（偏离 σ）
 c_val, c_badge = st.columns([3, 2])
 with c_val:
-    st.markdown(
-        f'<div style="font-size:3.2rem;font-weight:700;color:{INK};line-height:1">'
-        f"{m.current:+.2f}<span style='font-size:1.1rem;color:{MUTED};font-weight:400'>"
-        f" {m.unit}</span></div>"
-        f'<div style="color:{MUTED};margin-top:4px">当前值 · {m.name}</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown(hero_value(m.current, m.unit, m.name), unsafe_allow_html=True)
 with c_badge:
-    st.markdown(
-        f'<div style="background:{tier_fill(m.rating)};color:{tier_text(m.rating)};'
-        f'border-radius:10px;padding:14px 20px;text-align:center;margin-top:6px">'
-        f'<div style="font-size:1.6rem;font-weight:700">{RATING_LEVELS[m.rating]["label"]}</div>'
-        f'<div style="font-size:0.95rem;opacity:.92">{m.sigma:+.2f}σ 偏离历史均值</div>'
-        f"</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(rating_badge(m.rating, f"{m.sigma:+.2f}σ 偏离历史均值"),
+                unsafe_allow_html=True)
 
 # 五件套 3：五档红绿灯色条
-st.markdown(_tier_bar(m), unsafe_allow_html=True)
+st.markdown(tier_bar(m.rating), unsafe_allow_html=True)
 st.caption("估值z 口径：负 = 股票相对债券便宜（绿），正 = 贵（红）。")
 
 # 五件套 4：主图（全历史走势 + 所选窗口 σ 带）＋ 副图（expanding 估值z）
@@ -384,6 +373,39 @@ st.caption(
     "Spearman 秩相关；IC<0 = 便宜时未来收益高（σ 方法期望方向）。月频观测非独立，"
     "显著性偏乐观，不做 p 值断言；综合分样本 2019-03 起（3 年口径 n≈55），结论仅供参考。"
 )
+
+st.divider()
+
+# ── 红利低波簇打分卡（独立展示 · 不进综合分；设计文档十二节）──
+# 分组区隔：divider + subheader + 定位 caption；不在主侧栏模型列表、不进
+# 双窗口对照/锚点回验/IC 自证（口径不同：打分分位非 σ 方法估值z）。
+st.subheader("🧧 红利低波簇打分（独立展示 · 不进综合分）")
+st.caption("红利低波簇四标的的冻结打分卡：打分 = expanding z × ≤2023 样本内 ICIR 权重"
+           "（纯估值口径，回答「贵贱」）；操作建议与 QDII 溢价门控见「红利低波」策略页。"
+           "定位「估值参考 + 信号观察」，未走主项目 walk-forward；局限见各卡白话解释。")
+
+_div_key = st.selectbox("红利低波簇标的", list(DIVIDEND_MODELS), format_func=DIVIDEND_MODELS.get)
+dc = _MODEL_SPECS[_div_key][0](None)
+
+st.caption(
+    f"数据截止 {dc.updated} · {dc.window}口径（{dc.stats.start} 起 {dc.stats.n} 个交易日）"
+    f" · 冻结权重 {dc.weights}"
+)
+
+c_dval, c_dbadge = st.columns([3, 2])
+with c_dval:
+    st.markdown(hero_value(dc.current, dc.unit, dc.name, fmt="{:.0f}"), unsafe_allow_html=True)
+with c_dbadge:
+    st.markdown(rating_badge(dc.rating, f"打分z {dc.sigma:+.2f}（expanding 口径）"),
+                unsafe_allow_html=True)
+
+# 五档红绿灯：分位档口径（低=便宜=绿；边界 20/40/60/80 与 TIER_BOUNDS 一致）
+st.markdown(tier_bar(dc.rating, ranges=["< 20%", "20–40%", "40–60%", "60–80%", "≥ 80%"]),
+            unsafe_allow_html=True)
+st.caption("打分分位口径：低 = 相对自身历史便宜（绿），高 = 贵（红）。")
+
+st.plotly_chart(fig_pct_bands(dc.series, f"{dc.name}：打分分位走势与五档带"), width="stretch")
+st.markdown(f"> {dc.desc}")
 
 st.divider()
 st.caption("指标层 MetricResult 实时计算、不落盘；综合评分与其余模型卡片随第 4 步扩展。")

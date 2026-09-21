@@ -281,6 +281,82 @@ def _fetch_cn10y() -> FetchResult:
     return _try_chain([("chinamoney", fn)])
 
 
+# ---------------------------------------------------------------- 红利低波簇研究（dividend-research 迁入）
+_CSINDEX_PERF_URL = "https://www.csindex.com.cn/csindex-home/perf/index-perf"
+_CSINDEX_PERF_HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.csindex.com.cn/"}
+
+
+def _fetch_csindex_perf(code: str) -> FetchResult:
+    """中证官网 index-perf 接口：指数收盘 + 滚动市盈率 peg + 涨跌幅。
+
+    红利估值因子（pe_ttm/ey_spread）与全收益指数（H 开头代码）数据源。
+    中证官网间歇 502，走 retry_fetch 重试。
+    """
+    def fn() -> FetchResult:
+        def call() -> list:
+            r = requests.get(_CSINDEX_PERF_URL,
+                             params={"indexCode": code, "startDate": "20150101", "endDate": TODAY},
+                             headers=_CSINDEX_PERF_HEADERS, timeout=60)
+            r.raise_for_status()
+            return r.json().get("data") or []
+
+        data = retry_fetch(call, retries=5, base_sleep=2.0)
+        df = pd.DataFrame(data)
+        if df.empty:
+            raise RuntimeError("index-perf 返回空表")
+        df = df[["tradeDate", "close", "peg", "changePct"]].rename(
+            columns={"tradeDate": "date", "peg": "pe_ttm", "changePct": "pct_chg"})
+        df["date"] = pd.to_datetime(df["date"], format="%Y%m%d")
+        keep = ["date", "close", "pe_ttm", "pct_chg"]
+        return FetchResult(_std(df, {}, keep),
+                           source=f"csindex index-perf({code})", adjust="无（指数）",
+                           note="中证官网 index-perf；pe_ttm=peg 滚动市盈率（与 indicator.xls 口径略异）")
+    return _try_chain([("csindex", fn)])
+
+
+def _fetch_bond_zh_us_rate() -> FetchResult:
+    """中/美国债收益率（2/5/10/30Y + 利差 + GDP 年增率，akshare bond_zh_us_rate）。
+
+    红利估值利差（erp/ey_spread）无风险利率数据源；日历日频率（含周末空行）。
+    """
+    def fn() -> FetchResult:
+        df = retry_fetch(ak.bond_zh_us_rate)
+        col_map = {"日期": "date",
+                   "中国国债收益率2年": "cn_2y", "中国国债收益率5年": "cn_5y",
+                   "中国国债收益率10年": "cn_10y", "中国国债收益率30年": "cn_30y",
+                   "中国国债收益率10年-2年": "cn_spread_10y2y", "中国GDP年增率": "cn_gdp_yoy",
+                   "美国国债收益率2年": "us_2y", "美国国债收益率5年": "us_5y",
+                   "美国国债收益率10年": "us_10y", "美国国债收益率30年": "us_30y",
+                   "美国国债收益率10年-2年": "us_spread_10y2y", "美国GDP年增率": "us_gdp_yoy"}
+        keep = ["date", "cn_2y", "cn_5y", "cn_10y", "cn_30y", "cn_spread_10y2y", "cn_gdp_yoy",
+                "us_2y", "us_5y", "us_10y", "us_30y", "us_spread_10y2y", "us_gdp_yoy"]
+        return FetchResult(_std(df, col_map, keep),
+                           source="bond_zh_us_rate", adjust="不适用",
+                           note="单位 %，日历日频率；红利估值利差用 10Y 与 2Y")
+    return _try_chain([("em", fn)])
+
+
+def _fetch_macro_monthly() -> FetchResult:
+    """M1-M2 剪刀差 + PPI 同比（月度）。红利宏观因子（已否决，留档复验）。
+
+    防发布滞后泄漏：shift(1) 用上月已发布值（与原研究 macro_test 同口径）。
+    """
+    def fn() -> FetchResult:
+        m = retry_fetch(ak.macro_china_money_supply)
+        m["date"] = pd.to_datetime(m["月份"].str.replace("年", "-").str.replace("月份", "-01"))
+        m1 = pd.to_numeric(m.set_index("date")["货币(M1)-同比增长"], errors="coerce")
+        m2 = pd.to_numeric(m.set_index("date")["货币(M2)-同比增长"], errors="coerce")
+        p = retry_fetch(ak.macro_china_ppi)
+        p["date"] = pd.to_datetime(p["月份"].str.replace("年", "-").str.replace("月份", "-01"))
+        ppi = pd.to_numeric(p.set_index("date")["当月同比增长"], errors="coerce")
+        out = pd.DataFrame({"m1m2": m1 - m2, "ppi_yoy": ppi}).sort_index().shift(1)
+        out = out.reset_index()
+        return FetchResult(_std(out, {}, ["date", "m1m2", "ppi_yoy"]),
+                           source="macro_china_money_supply + macro_china_ppi", adjust="不适用",
+                           note="M1-M2剪刀差(百分点)与PPI同比(%)，月度；已滞后一月防发布日泄漏")
+    return _try_chain([("em", fn)])
+
+
 # ---------------------------------------------------------------- QVIX
 def _fetch_qvix(which: str) -> FetchResult:
     fn_api = {"50etf": ak.index_option_50etf_qvix,
@@ -605,6 +681,17 @@ DATASETS: list[Dataset] = [
             _fetch_unemployment, "全国城镇调查失业率(月度)"),
     Dataset("pmi_official", "macro/pmi_official.parquet",
             _fetch_pmi_official, "官方制造业 PMI(月度)"),
+    # 红利低波簇研究（dividend-research 迁入，2026-09-21）
+    *[Dataset(f"csindex_pe_{c}", f"valuation/csindex_pe_{c}.parquet",
+              lambda c=c: _fetch_csindex_perf(c), "中证官网 PE（peg 滚动市盈率，红利估值因子）")
+      for c in ["H30269", "930955", "000300"]],
+    *[Dataset(f"index_tr_{c}", f"index_daily/index_tr_{c}.parquet",
+              lambda c=c: _fetch_csindex_perf(c), "全收益指数收盘（中证官网）")
+      for c in ["H20269", "H20955", "H00922", "H00300"]],
+    Dataset("bond_zh_us_rate", "rates/bond_zh_us_rate.parquet",
+            _fetch_bond_zh_us_rate, "中/美国债收益率 2/5/10/30Y"),
+    Dataset("macro_monthly", "macro/macro_monthly.parquet",
+            _fetch_macro_monthly, "M1M2剪刀差+PPI同比（月度，滞后一月）"),
     # 交易日历
     Dataset("calendar", "calendar.parquet", _fetch_calendar, "A股交易日历"),
 ]

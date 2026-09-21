@@ -19,7 +19,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/data_module", "src/metrics", "src/strategy"]
+packages = ["src/data_module", "src/metrics", "src/strategy", "src/dividend"]
 
 [dependency-groups]
 dev = [

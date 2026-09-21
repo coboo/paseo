@@ -1,0 +1,6 @@
+{
+  "source_interface": "csindex index-perf(H20955)；CSV迁移",
+  "adjust": "无（全收益指数）",
+  "fetch_date": "2026-09-21",
+  "note": "来自 dividend-research 迁移（存量 CSV 转换，原始文件保留在 dividend-research/data/raw/）"
+}

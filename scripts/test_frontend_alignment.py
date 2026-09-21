@@ -39,6 +39,20 @@ for key in ["composite", "erp_000300", "curve_10y3m", "dividend_spread",
     assert len(at.markdown) >= 4 and len(at.table) == 3, f"[{key}] 五件套区块缺失"
 print("valuation_dashboard 全卡片 OK")
 
+# ── 估值仪表盘：红利低波簇分组遍历（2026-09-21 新增，独立展示不进综合分）──
+# 红利簇 selectbox 在主页面（侧栏 selectbox[0] 仍是估值模型，勿混）；
+# 按 label 取（AppTest 多 selectbox 下标取元素会错位的既定坑）
+for key in ["div_H30269", "div_930955", "div_515450", "div_159545"]:
+    at = AppTest.from_file(DASH).run()
+    div_sb = next(s for s in at.selectbox if s.label == "红利低波簇标的")
+    div_sb.select(key)
+    at.run()
+    assert not at.exception, f"dashboard [{key}] 异常：{at.exception}"
+    # 与 14 卡同一套五件套（hero/徽章 markdown + 色条 + desc），不加剧透表
+    assert len(at.markdown) >= 4, f"[{key}] 五件套区块缺失"
+    assert len(at.table) == 3, f"[{key}] 不应改变双窗口/锚点/IC 三表结构"
+print("valuation_dashboard 红利低波簇分组 OK")
+
 
 # ── 数据浏览器：总览 → 侧栏直接挑选 → 详情（绘图分支）──
 # （st.dataframe 的行选择交互 AppTest 无法模拟，改走"直接挑选"模式）

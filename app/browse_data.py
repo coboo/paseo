@@ -93,6 +93,16 @@ DATASET_NAMES = {
     "raw/macro/epu_china": "中国 EPU 政策不确定性指数（月度）",
     "raw/macro/urban_unemployment": "全国城镇调查失业率（月度）",
     "raw/macro/pmi_official": "官方制造业 PMI（月度）",
+    # 红利低波簇研究（dividend-research 迁入）
+    "raw/valuation/csindex_pe_H30269": "红利低波 H30269 PE（中证官网 peg）",
+    "raw/valuation/csindex_pe_930955": "红利低波100 930955 PE（中证官网 peg）",
+    "raw/valuation/csindex_pe_000300": "沪深300 PE（中证官网 peg）",
+    "raw/index_daily/index_tr_H20269": "红利低波 H20269 全收益收盘",
+    "raw/index_daily/index_tr_H20955": "红利低波100 H20955 全收益收盘",
+    "raw/index_daily/index_tr_H00922": "中证红利 H00922 全收益收盘",
+    "raw/index_daily/index_tr_H00300": "沪深300 H00300 全收益收盘",
+    "raw/rates/bond_zh_us_rate": "中/美国债收益率 2/5/10/30Y",
+    "raw/macro/macro_monthly": "M1M2剪刀差 + PPI同比（月度，滞后一月）",
     # derived
     "derived/aligned/bond_leg_spliced_511260": "债券腿拼接序列（财富指数→511260）",
 }
