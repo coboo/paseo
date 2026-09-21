@@ -1,6 +1,6 @@
 {
-  "source_interface": "csindex index-perf(H00922)；CSV迁移",
-  "adjust": "无（全收益指数）",
+  "source_interface": "csindex index-perf(H00922)",
+  "adjust": "无（指数）",
   "fetch_date": "2026-09-21",
-  "note": "来自 dividend-research 迁移（存量 CSV 转换，原始文件保留在 dividend-research/data/raw/）"
+  "note": "全收益指数收盘（中证官网）；中证官网 index-perf；pe_ttm=peg 滚动市盈率（与 indicator.xls 口径略异）"
 }
