@@ -209,7 +209,7 @@ def main() -> None:
     st.divider()
     st.caption("实盘映射：563020 / 515450 / 159307 / 159545（QDII，买入前过溢价 ≤3% 门控）· "
                "页面只读消费 src/dividend 冻结打分（不改权重与参数），计算 @st.cache_data 不落盘 · "
-               "研究全文：dividend-research/HANDOFF.md · 规则出处：设计方案十二节")
+               "研究全文：dividend-handoff.md（私有文档仓 coboo/paseo-docs，含完整研究过程）· 规则出处：设计方案十二节")
 
 
 main()
