@@ -49,18 +49,26 @@ def _premium_159545() -> tuple[float | None, str, bool]:
 
     口径同行情监控页：ETF 价 ÷ 最新单位净值 − 1（单位净值，非累计净值）。
     PASEO_MARKET_OFFLINE=1 时不发网络请求，premium=None + offline=True。
+    只走新浪单票快照（timeout 8s，由 quotes 模块保证）——本页不调用 collect_quotes()
+    全量链：云上对新浪/东财不可达时东财兜底会重试到分钟级，阻塞整页首渲（2026-09-21 实测）。
+    新浪不可达时 premium=None，页面降级为提示自行核对行情监控页，语义不变。
     """
     offline = os.environ.get("PASEO_MARKET_OFFLINE") == "1"
     if offline:
         return None, "离线模式", True
-    from data_module.quotes import collect_quotes
+    from data_module.quotes import _latest_nav, _sina_etf_quotes
 
-    rows = collect_quotes()
-    r = next((x for x in rows if x.etf_code == "159545"), None)
-    if r is None or r.premium is None:
-        return None, (f"{r.etf.source}（净值缺失）" if r else "无数据"), False
-    asof = f"{r.etf.source} {r.etf.asof}" + (f" · 净值 {r.nav_date}" if r.nav_date else "")
-    return float(r.premium), asof, False
+    try:
+        q = _sina_etf_quotes(["159545"]).get("159545")
+    except Exception:
+        q = None
+    nav = _latest_nav("159545")
+    if q is None or not q.price or nav is None:
+        src = q.source if q else "新浪不可达"
+        return None, (f"{src}（净值缺失）" if nav is None else src), False
+    premium = (float(q.price) / nav[0] - 1) * 100
+    asof = f"{q.source} {q.asof} · 净值 {nav[1]}"
+    return premium, asof, False
 
 
 def _signal_card_html(code: str, card: DividendCard, premium: float | None,
