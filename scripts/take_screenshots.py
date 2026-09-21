@@ -19,7 +19,6 @@ PAGES = [
     ("", "faber_strategy.png"),
     ("market", "market_monitor.png"),
     ("valuation", "valuation_dashboard.png"),
-    ("backtest", "gem_backtest.png"),
     ("data", "data_browser.png"),
 ]
 

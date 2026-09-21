@@ -174,7 +174,7 @@ def main():
     st.divider()
     st.caption("实盘映射:" + " / ".join(f"{ASSET_CN[k]}→{ETF_MAP[k]}" for k in ["hs300", "spx", "bond", "gold"])
                + " · 现金腿→货基/逆回购 · 复现:`PYTHONPATH=src uv run python -m strategy.run_baselines faber` · "
-               "回测工作台(含敏感性/WF):`uv run streamlit run app/gem_backtest.py`")
+               "敏感性/WF 复现:`PYTHONPATH=src uv run python -m strategy.sweep` / `... walkforward`")
 
 
 main()

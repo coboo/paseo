@@ -18,7 +18,6 @@ pages = [
     st.Page(_HERE / "dividend_page.py", title="🧧 红利低波(信号观察)", url_path="dividend"),
     st.Page(_HERE / "market_monitor.py", title="📡 行情监控", url_path="market"),
     st.Page(_HERE / "valuation_dashboard.py", title="📈 估值仪表盘", url_path="valuation"),
-    st.Page(_HERE / "gem_backtest.py", title="🔬 回测工作台", url_path="backtest"),
     st.Page(_HERE / "browse_data.py", title="🗄 数据浏览器", url_path="data"),
 ]
 st.navigation(pages).run()

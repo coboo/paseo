@@ -6,7 +6,7 @@
 [![English](https://img.shields.io/badge/Lang-English-blue)](README.en.md)
 
 **A quantitative index/ETF investing system for China's A-share market**
-Valuation dashboard · Tactical strategy live tracking · Market monitor · Rigorous backtesting
+Valuation dashboard · Tactical strategy live tracking · Dividend low-vol signal watch · Market monitor
 
 [![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-baiyunshan.streamlit.app-ff4b4b)](https://baiyunshan.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
@@ -40,9 +40,9 @@ A **data-driven** toolbox for index investing in Chinese A-shares. Every day it 
 | Page | Contents |
 |---|---|
 | 🎯 **Faber Strategy (live)** | The 10-month moving-average timing strategy from a practitioner's view: current holdings, distance to MA, next rebalance date. Passed main tests ✅ / walk-forward ✅ / holdout accepted after human review |
+| 🧧 **Dividend Low-Vol (signal watch)** | Four dividend low-vol instruments scored by percentile (5-tier cheap/expensive) + P(1Y return > 0) + mechanical suggestions (accumulate when cheap / hold at fair / trim when expensive), QDII premium ≤3% gate |
 | 📡 **Market Monitor** | Quote board of 12 indices + 16 ETFs (Sina/Eastmoney realtime + EOD fallback), **TD Setup ("Magic Nine") on daily/weekly/monthly levels** (tinted background at ≥7, deepened + bold at the 9 completion), **QDII premium monitoring** (alert beyond ±3% gate) |
 | 📈 **Valuation Dashboard** | 14 macro/valuation model cards (Buffett Indicator, ERP, margin debt, QVIX, dividend spread, PMI…) → standardized σ composite score with 5-tier rating; bottom section shows **IC validation**: composite score vs. future 3-year returns, Spearman rank IC −0.72 |
-| 🔬 **Backtest Workbench** | Two-layer GEM dual-momentum backtest localized for China/US, parameter sensitivity heatmaps, four baseline strategy comparisons |
 | 🗄 **Data Browser** | All 58 datasets at a glance: rows / date range / source; any table plottable, one-click incremental update from the sidebar |
 
 ## Why it's worth a star
