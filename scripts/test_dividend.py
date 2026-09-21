@@ -3,9 +3,12 @@
 覆盖：
 ① 因子面板 schema 与行数断言
 ② 冻结权重复现：权重与第 0 步产物一致；修复点（pct_rank 不含当日）处
-   新面板 = 旧面板 shift(1) 精确吻合；旧算法复现第 0 步打分逐行一致
+   新面板 = 旧面板 shift(1) 精确吻合；打分计算确定性（两遍逐值一致）+
+   ASOF 截尾快照硬编码断言（研究目录已删，原 score_*.csv 逐行复现改为
+   对本仓库冻结产物的自校验，数值 2026-09-21 实测写入）
 ③ 无前视断言：rolling_ic 窗内秩（未来数据扰动不影响历史 IC）、pct_rank 不含当日
-④ 净值对齐断言：研究 CSV 日期 +1 交易日与主项目 akshare 净值按值吻合，错位消除
+④ 净值日期对齐守卫（自校验版）：净值日期落在 A 股日历内 + 净值收益与
+   H30269 同日相关严格大于 ±1 日错位相关（原研究 CSV 对拍随目录删除下线）
 ⑤ 主项目数据验收五查回归
 
 用法：PYTHONPATH=src uv run python scripts/test_dividend.py
@@ -23,11 +26,21 @@ from data_module import validate as dm_validate          # noqa: E402
 from data_module.storage import read_raw                 # noqa: E402
 from dividend import factors, layered, score             # noqa: E402
 
-RESEARCH = ROOT / "dividend-research"
 PANEL_MIN_ROWS = {"H30269": 2800, "930955": 2800, "515450": 1500, "159545": 400}
 PANEL_COLS = ["close", "tr", "dv", "erp", "ey_spread", "cgb10",
               "mom_21", "mom_63", "mom_126", "mom_252", "vol_20", "vol_60",
               "pe_pct", "dv_pct", "erp_pct", "fwd_21", "fwd_63", "fwd_126", "fwd_252"]
+
+# 打分快照 ASOF：面板截尾至该日，数据追加后快照值不变（2026-09-21 写入）
+ASOF = "2026-09-18"
+# 冻结产物 ASOF 读数（score_full 含动量口径，2026-09-21 实测；权重只用
+# ≤2023 样本内，数据追加不影响；任何实现改动导致读数漂移都会在此显形）
+FROZEN_READINGS = {
+    "H30269": {"score_z": 0.38, "score_pctile": 0.521, "P(fwd126>0)": 0.721, "P(fwd252>0)": 0.915},
+    "930955": {"score_z": 0.31, "score_pctile": 0.553, "P(fwd126>0)": 0.750, "P(fwd252>0)": 0.941},
+    "515450": {"score_z": -0.90, "score_pctile": 0.298, "P(fwd126>0)": 0.790, "P(fwd252>0)": 0.946},
+    "159545": {"score_z": 1.03, "score_pctile": 0.828, "P(fwd126>0)": 1.000, "P(fwd252>0)": 0.889},
+}
 
 # 第 0 步产物 current_scores.csv 的冻结权重（icir_weights 估计，勿改）
 FROZEN_WEIGHTS = {
@@ -75,11 +88,13 @@ def test_frozen_weights(panels: dict[str, pd.DataFrame]) -> None:
 
 
 def test_score_reproduction(panels: dict[str, pd.DataFrame]) -> None:
-    """②b 修复点精确吻合 + 旧算法复现第 0 步打分。
+    """②b 修复点精确吻合 + 打分确定性 + ASOF 冻结读数硬编码断言。
 
     H30269/930955 的 raw 数据与第 0 步完全相同（同一批 csindex CSV 迁移），因此：
     - 新面板 dv_pct/erp_pct/pe_pct 应等于旧算法 shift(1)（不含当日修复）；
-    - 用旧 pct_rank 重建的面板跑同一打分代码，score_z 应与第 0 步 score_*.csv 逐行一致。
+    - 研究目录已删（2026-09-21 用户决定清理），原"旧算法复现 score_*.csv 逐行
+      一致"改为自校验：同一面板两遍打分逐值一致（确定性）+ 面板截尾至 ASOF
+      的冻结读数与下方硬编码快照逐项相等（任何实现改动/权重漂移在此显形）。
     """
     for code in ("H30269", "930955"):
         new = panels[code]
@@ -90,21 +105,26 @@ def test_score_reproduction(panels: dict[str, pd.DataFrame]) -> None:
             mask = ~np.isnan(a) & ~np.isnan(b)
             # 理论上 new(t) = legacy(t-1)·(t-1)/t（窗口分母差一日）， Warmup 段容差放宽
             assert np.allclose(a[mask], b[mask], atol=5e-3), f"{code}.{c} 与旧算法 shift(1) 不吻合"
+        print(f"  ②b {code}: 修复点=旧算法 shift(1) 吻合")
 
-        # 旧算法面板（仅回写三个分位列）→ 复现第 0 步打分
-        legacy = new.copy()
-        legacy["pe_pct"] = legacy_pct_rank(new["pe_ttm"])
-        legacy["dv_pct"] = legacy_pct_rank(new["dv"])
-        legacy["erp_pct"] = legacy_pct_rank(new["erp"])
-        legacy_panels = dict(panels)
-        legacy_panels[code] = legacy
-        legacy_scores, _ = score.score_full(legacy_panels)
-        old = pd.read_csv(RESEARCH / "data" / "factors" / f"score_{code}.csv",
-                          parse_dates=["date"], index_col="date")["score_z"]
-        new_s = legacy_scores[code]["score_z"].reindex(old.index)
-        diff = (new_s - old).abs().max()
-        assert diff < 1e-8, f"{code} 旧算法复现第 0 步打分 max|diff|={diff}"
-        print(f"  ②b {code}: 修复点=旧算法 shift(1) 吻合；旧算法复现 score_z max|diff|={diff:.2e}")
+    # 确定性：同一面板两遍打分逐值一致（score_z / score_pct / 概率全链路）
+    s1, _ = score.score_full(panels)
+    s2, _ = score.score_full(panels)
+    for code in score.INSTRUMENTS:
+        for col in ("score_z", "score_pct"):
+            d = (s1[code][col] - s2[code][col]).abs().max()
+            assert d == 0.0, f"{code} {col} 两遍不一致 max|diff|={d}"
+    print("  ②b 打分确定性：两遍 score_z/score_pct 逐值一致")
+
+    # ASOF 截尾快照：冻结读数与硬编码一致（快照值不随数据追加漂移）
+    panels_asof = {c: p.loc[:ASOF] for c, p in panels.items()}
+    _, summ = score.score_full(panels_asof)
+    summ = summ.set_index("instrument")
+    for code, expect in FROZEN_READINGS.items():
+        for col, want in expect.items():
+            got = summ.loc[code, col]
+            assert got == want, f"{code} {col}: {got} != 冻结快照 {want}（ASOF {ASOF}）"
+    print(f"  ②b ASOF({ASOF}) 冻结读数与硬编码快照逐项一致")
 
     # 新口径打分与第 0 步读数（数据截止 2026-09-11 基金 / 09-18 指数，差异已在报告记录）
     _, summ = score.score_full(panels)
@@ -158,46 +178,36 @@ def _ic_series(df: pd.DataFrame, fac: str, direction: int, h: int, win: int = 50
 
 
 def test_nav_alignment() -> None:
-    """④ 净值对齐：研究 CSV（pingzhongdata，日期 -1 交易日）对齐后按值吻合。"""
-    cal = read_raw("calendar.parquet")["date"].sort_values().reset_index(drop=True)
-    cal_idx = pd.DatetimeIndex(cal)
+    """④ 净值日期对齐守卫（自校验版，2026-09-21 起）。
 
-    def to_next_trading_day(dates: pd.DatetimeIndex) -> pd.DatetimeIndex:
-        pos = cal_idx.searchsorted(dates, side="right")
-        pos = np.minimum(pos, len(cal_idx) - 1)
-        return cal_idx[pos]
+    研究 CSV（pingzhongdata）对拍已随 dividend-research/ 目录删除下线。留下的
+    回归风险是"净值日期错位 -1 交易日"（迁移期踩过的坑），自校验口径：
+    - 净值日期必须落在 A 股交易日历内（抓错源/错位会跑出日历）；
+    - 净值日收益与 H30269（A 股红利低波，同风格锚）**同日**相关必须严格
+      大于 ±1 日错位相关——日期一旦错位，lag-0 相关塌缩、错位相关不升。
+    """
+    cal = pd.DatetimeIndex(read_raw("calendar.parquet")["date"].sort_values())
+    cal_set = set(cal)
+    anchor = read_raw("index_daily/index_H30269.parquet").set_index("date")["close"]
+    r_anchor = anchor.pct_change()
 
     for code, rel in [("515450", "index_daily/spdiv50_nav_515450.parquet"),
                       ("159545", "index_global/hshylv_nav_159545.parquet")]:
-        research = pd.read_csv(RESEARCH / "data" / "raw" / f"fund_nav_{code}.csv", parse_dates=["date"])
-        research["date"] = research["date"].dt.normalize()
-        main = read_raw(rel).set_index("date")
-        # 错位消除：研究日期 → 下一交易日，再与主项目净值按日期对齐
-        research["fixed_date"] = to_next_trading_day(pd.DatetimeIndex(research["date"]))
-        j = research.set_index("fixed_date")[["nav"]].join(main[["close"]], how="inner")
-        assert len(j) > 100, f"{code} 对齐后重叠样本过少: {len(j)}"
-        match = ((j["nav"] - j["close"]).abs() < 1e-6).mean()
-        # 99%+ 按值精确吻合即证实错位消除；个别分红除息日两供应商记账日不同
-        # （515450 实测 3/1601 日，差异约 1.6% 分红块），用收益率相关兜底
-        assert match > 0.99, f"{code} 对齐后按值吻合率 {match:.2%} < 99%"
-        r_aligned = j["close"].pct_change()
-        r_research = j["nav"].pct_change()
-        ok_days = (j["nav"] - j["close"]).abs() < 1e-6  # 剔除供应商分红记账日差异
-        assert r_aligned[ok_days].corr(r_research[ok_days]) > 0.999, f"{code} 对齐后收益率相关不足"
-        # 未对齐（同日直接 join）应有明显错位
-        naive = research.set_index("date")[["nav"]].join(main[["close"]], how="inner")
-        naive_match = ((naive["nav"] - naive["close"]).abs() < 1e-6).mean()
-        assert naive_match < 0.5, f"{code} 未对齐 join 匹配率 {naive_match:.0%}，错位假设未证实"
-        # 对齐收益与红利低波指数收益相关性应高于未对齐
-        idx = read_raw("index_daily/index_H30269.parquet").set_index("date")["close"]
-        r_aligned = j["close"].pct_change()
-        r_idx = idx.reindex(j.index).ffill().pct_change()
-        r_raw = research.set_index("date")["nav"].pct_change()
-        r_idx_raw = idx.reindex(research["date"]).ffill().pct_change()
-        c_aligned = r_aligned.corr(r_idx)
-        c_raw = r_raw.corr(r_idx_raw)
-        assert c_aligned > c_raw, f"{code} 对齐后相关性未提升 {c_raw:.3f}->{c_aligned:.3f}"
-        print(f"  ④ {code}: 对齐后 {len(j)} 日按值吻合；与 H30269 收益相关 {c_raw:.3f} -> {c_aligned:.3f}")
+        nav = read_raw(rel).set_index("date")["close"]
+        in_cal = pd.DatetimeIndex(nav.index).isin(cal_set).mean()
+        assert in_cal > 0.99, f"{code} 净值日期 {in_cal:.2%} 落在 A 股日历外"
+        r_nav = nav.pct_change()
+        corrs = {}
+        for lag in (-1, 0, 1):
+            j = pd.concat([r_nav, r_anchor.shift(-lag).rename("a")], axis=1,
+                          sort=False).dropna()
+            corrs[lag] = j.iloc[:, 0].corr(j.iloc[:, 1])
+        assert corrs[0] > 0.5, f"{code} 同日相关 {corrs[0]:.3f} 过低，净值数据可疑"
+        assert corrs[0] > corrs[-1] + 0.3 and corrs[0] > corrs[1] + 0.3, \
+            f"{code} 同日相关未显著优于错位相关: {corrs}"
+        print(f"  ④ {code}: {len(nav)} 行，日历内 {in_cal:.2%}；"
+              f"vs H30269 相关 lag-1/0/+1 = {corrs[-1]:.3f}/{corrs[0]:.3f}/{corrs[1]:.3f}"
+              "（同日显著占优，日期无错位）")
 
 
 def test_data_validation() -> None:

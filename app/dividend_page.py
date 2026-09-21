@@ -5,6 +5,11 @@
 （五档贵贱）+ P(1年收益>0) + 机械操作建议（低估分批建仓/公允持有/高估减仓）；
 159545 为 QDII，买入建议叠加溢价率 ≤3% 门控（超门控显示"等待溢价回落"）。
 
+打分历史之后为「打分 × 后续走势（历史自证）」区块（A 五档前瞻收益表 /
+B 散点 + Spearman IC / C 极低估事件研究，计算在 src/dividend/forward.py
+纯函数层，复刻估值页 IC 自证范式）；159545 样本不足时事件研究显示
+"样本不足，不可外推"提示，不画误导性曲线。
+
 定位诚实声明：本研究未走主项目 walk-forward + holdout 流程（设计文档十二节），
 页面为"估值参考 + 信号观察"，不构成实盘指令；计算全部 @st.cache_data 不落盘
 （AGENTS.md 规则 5）；PASEO_MARKET_OFFLINE=1 时溢价区显示离线兜底提示，
@@ -17,6 +22,7 @@ import os
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -24,12 +30,13 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from components import (CATEGORICAL, GREEN_WASH, GRID, INK, INK2, MUTED, RED_WASH,
-                        base_layout, tier_text)
+from components import (BLUE, CATEGORICAL, GREEN_WASH, GRID, INK, INK2, MUTED,
+                        RED_WASH, base_layout, tier_fill, tier_text)
 from dividend.cards import (CALIBER_LABELS, CLUSTER_WEIGHT_RANGE, INSTRUMENTS, ORDER,
                             PREMIUM_CAP, RATING_LEVELS, SUGGESTED_WEIGHTS,
                             advice_for_pct, apply_premium_gate, compute_cards)
 from dividend.cards import DividendCard  # noqa: F401  (类型留档，页面只读消费)
+from dividend.forward import HORIZONS, IC_MIN_N, compute_self_check
 
 st.set_page_config(page_title="红利低波簇策略信号", page_icon="🧧", layout="wide")
 
@@ -41,6 +48,12 @@ PREMIUM_WARN = "#ec835a"
 @st.cache_data(ttl=3600)
 def _cards(caliber: str) -> dict:
     return compute_cards(caliber)
+
+
+@st.cache_data(ttl=3600)
+def _self_check() -> dict:
+    """打分 × 后续走势三件套（纯函数在 src/dividend/forward.py，不落盘）。"""
+    return compute_self_check()
 
 
 @st.cache_data(ttl=300)
@@ -125,6 +138,90 @@ def _history_fig(cards: dict) -> go.Figure:
     return fig
 
 
+def _tier_table_html(tbl: pd.DataFrame) -> str:
+    """A · 五档前瞻收益表（HTML 表：行=五档档色徽章，列=各期限中位数/胜率/样本数）。
+
+    数值一律墨字（DESIGN.md：本页禁用红涨绿跌行情语义）；无样本格显示 ——。
+    """
+    def cell(r: pd.Series, h: int) -> str:
+        if not r[f"n_{h}"]:
+            return f'<div style="color:{MUTED}">—</div>'
+        return (f'<div style="color:{INK};font-weight:600">{r[f"med_{h}"] * 100:+.1f}%</div>'
+                f'<div style="color:{INK2};font-size:0.82rem">胜率 {r[f"win_{h}"] * 100:.0f}%'
+                f'<span style="color:{MUTED}"> · n={r[f"n_{h}"]}</span></div>')
+
+    th = (f'padding:6px 10px;text-align:center;color:{MUTED};font-weight:600;'
+          f"border-bottom:2px solid {GRID}")
+    head = "".join(f"<th style='{th}'>之后 {h} 日</th>" for h in HORIZONS)
+    rows = []
+    for _, r in tbl.iterrows():
+        tier = int(r["tier"])
+        badge = (f'<span style="background:{tier_fill(tier)};color:{tier_text(tier)};'
+                 f'border-radius:6px;padding:3px 12px;font-weight:600">{r["label"]}</span>')
+        cells = "".join(f"<td style='padding:8px 10px;text-align:center;"
+                        f"border-bottom:1px solid {GRID}'>{cell(r, h)}</td>"
+                        for h in HORIZONS)
+        rows.append(f"<tr><td style='padding:8px 10px;border-bottom:1px solid {GRID}'>{badge}</td>"
+                    f"{cells}</tr>")
+    return (f'<table style="border-collapse:collapse;width:100%"><thead><tr>'
+            f"<th style='{th};text-align:left'>打分档位</th>{head}</tr></thead>"
+            f"<tbody>{''.join(rows)}</tbody></table>")
+
+
+def _scatter_fig(res: dict, label: str, horizon: int) -> go.Figure:
+    """B · 打分分位 vs 未来 h 日收益散点 + OLS 趋势线（蓝）+ IC 标注。"""
+    d = res["df"]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=d["pct"], y=d["fwd"] * 100, mode="markers",
+        marker=dict(color=INK2, size=6, opacity=0.45),  # 散点淡墨
+        text=d["date"].dt.strftime("%Y-%m-%d"),
+        hovertemplate="%{text}：分位 %{x:.0f}% → 未来%{y:+.1f}%<extra></extra>",
+    ))
+    if len(d) >= 12:
+        k_, b_ = np.polyfit(d["pct"], d["fwd"] * 100, 1)
+        x0, x1 = float(d["pct"].min()), float(d["pct"].max())
+        fig.add_trace(go.Scatter(
+            x=[x0, x1], y=[k_ * x0 + b_, k_ * x1 + b_], mode="lines",
+            name="OLS 趋势线（判读辅助，非预测）", line=dict(color=BLUE, width=2),
+        ))
+    ic_txt = f"Spearman IC = {res['ic']:+.2f}" if res["n"] >= IC_MIN_N else "样本不足不报 IC"
+    fig.add_hline(y=0, line=dict(color=MUTED, width=1))
+    base_layout(fig, "未来收益(%)")
+    fig.update_layout(
+        title=f"{label}：打分分位 vs 未来 {horizon} 日全收益（{ic_txt}，n={res['n']}）",
+        showlegend=True, legend=dict(orientation="h", y=1.12),
+        xaxis=dict(title="打分分位（expanding 当时视角，无前视；高=贵）",
+                   range=[0, 100], zeroline=False),
+    )
+    return fig
+
+
+def _event_fig(res: dict, label: str) -> go.Figure:
+    """C · 极低估事件路径 vs 全部交易日等权基准（categorical 双色，双序列图例）。"""
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=res["event_path"].index, y=res["event_path"].values * 100, mode="lines",
+        name=f"极低估事件路径（n={res['n_events']}，{res['first_event']} ~ {res['last_event']}）",
+        line=dict(color=BLUE, width=2.2),
+        hovertemplate="T+%{x}：%{y:+.1f}%<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=res["baseline_path"].index, y=res["baseline_path"].values * 100, mode="lines",
+        name="全部交易日等权基准",
+        line=dict(color=CATEGORICAL[1], width=1.8, dash="dash"),
+        hovertemplate="T+%{x}：%{y:+.1f}%<extra></extra>",
+    ))
+    fig.add_hline(y=0, line=dict(color=MUTED, width=1))
+    base_layout(fig, "累计收益(%)")
+    fig.update_layout(
+        title=f"{label}：首次进入极低估区（<20%）后 {res['window']} 个交易日平均累计收益",
+        showlegend=True, legend=dict(orientation="h", y=1.12),
+        xaxis=dict(title="事件后交易日", zeroline=False),
+    )
+    return fig
+
+
 def _evidence_block() -> None:
     """证据链摘要（实测与裁决分离纪律：walk-forward 未做必须如实标 ❌）。"""
     rows = [
@@ -199,7 +296,52 @@ def main() -> None:
     st.subheader("打分历史")
     st.plotly_chart(_history_fig(val), width="stretch")
 
-    # ── ⑤ 证据链与诚实声明 ──
+    # ── ⑤ 打分 × 后续走势（历史自证；与证据链"四重验证"互证不重复）──
+    st.subheader("打分 × 后续走势（历史自证）")
+    st.caption("打分 = 纯估值口径分位（expanding 当时视角，T 日信号仅用 T-1 及以前数据，无前视）；"
+               "前瞻收益 = 未来 h 个交易日全收益（标签天然向后）。重叠前瞻窗口使样本非独立，"
+               "全部统计只做判读、不做 p 值断言。")
+    self_check = _self_check()
+    sel_cols = st.columns([1, 2])
+    with sel_cols[0]:
+        sc_code = st.selectbox("标的", ORDER,
+                               format_func=lambda c: INSTRUMENTS[c]["label"], index=0)
+    sc_label = INSTRUMENTS[sc_code]["label"]
+
+    # A · 五档前瞻收益表
+    st.markdown(f"**A · 五档前瞻收益（{sc_label}）**：打分分位按 "
+                "<20 / 20-40 / 40-60 / 60-80 / ≥80 分五档，统计每档**之后**各期限全收益")
+    st.markdown(_tier_table_html(self_check[sc_code]["tier"]), unsafe_allow_html=True)
+    st.caption("中位数/胜率单位为小数收益换算；前瞻窗口重叠（同一交易日同时落入多期统计），"
+               "各档样本非独立；前瞻期限越长可观测样本越少（末段不足 h 日的交易日无标签）。")
+
+    # B · 散点 + Spearman IC（复刻估值页 IC 自证范式）
+    with sel_cols[1]:
+        sc_h = st.radio("前瞻期限", list(HORIZONS), horizontal=True, index=0,
+                        format_func=lambda h: f"未来 {h} 日")
+    st.markdown(f"**B · 打分分位 vs 未来收益（{sc_label}）**：散点淡墨 + 蓝色 OLS 趋势线（判读辅助，非预测）")
+    sc_res = self_check[sc_code]["scatter"][sc_h]
+    st.plotly_chart(_scatter_fig(sc_res, sc_label, sc_h), width="stretch")
+    st.caption(f"IC = 打分分位与未来收益的 Spearman 秩相关（覆盖 {sc_res['coverage_start']} ~ "
+               f"{sc_res['coverage_end']}）。实测本簇打分各期限 IC > 0（历史上分位越高、后续收益越高），"
+               "与「低估建仓」直觉方向相反——打分是估值状态刻画而非收益预测，此结果如实呈现，判读须谨慎。")
+
+    # C · 事件研究（首次进入极低估区后 252 日；样本不足不画曲线）
+    st.markdown(f"**C · 极低估事件研究（{sc_label}）**：打分首次进入 <20% 极低估区的事件日 T 后 "
+                "252 个交易日平均累计收益 vs 全部交易日等权基准")
+    ev = self_check[sc_code]["event"]
+    if ev["ok"]:
+        st.plotly_chart(_event_fig(ev, sc_label), width="stretch")
+        st.caption("事件口径：T 日打分首次 <20%（T-1 不在区内；连续在区间只取首次进入日，避免重叠事件"
+                   "过度重复——同一轮低估只计一次）；事件后不足 252 个交易日的样本不计入"
+                   f"（本标的另有 {ev['n_skipped_incomplete']} 起尾部截断）。基准 = 全部交易日等权"
+                   "平均的同期累计收益（同一全收益序列、同一窗口）。重叠窗口样本非独立，不做显著性断言。")
+    else:
+        st.warning(f"**{sc_label}** 极低估事件样本不足（完整 252 日窗口事件 n={ev['n_events']} < 5，"
+                   f"另有 {ev['n_skipped_incomplete']} 起事件因历史太短、事件后不足 252 日而截断）"
+                   "——样本不足，不可外推，不画事件曲线（口径与打分卡 ⚠️不可外推 标记一致）。")
+
+    # ── ⑥ 证据链与诚实声明 ──
     st.subheader("证据链（全部检验的完整记录）")
     _evidence_block()
     st.caption("已知局限（HANDOFF 诚实展示）：515450/159545 缺 PE（股息率/ERP 口径代理，"
