@@ -1,6 +1,6 @@
 {
   "source_interface": "csindex index-perf(H30269)",
   "adjust": "无（指数）",
-  "fetch_date": "2026-09-21",
+  "fetch_date": "2026-09-22",
   "note": "中证官网 PE（peg 滚动市盈率，红利估值因子）；中证官网 index-perf；pe_ttm=peg 滚动市盈率（与 indicator.xls 口径略异）"
 }

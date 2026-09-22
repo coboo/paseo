@@ -1,6 +1,6 @@
 {
   "source_interface": "bond_zh_us_rate",
   "adjust": "不适用",
-  "fetch_date": "2026-09-21",
+  "fetch_date": "2026-09-22",
   "note": "中/美国债收益率 2/5/10/30Y；单位 %，日历日频率；红利估值利差用 10Y 与 2Y"
 }
