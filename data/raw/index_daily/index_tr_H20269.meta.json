@@ -1,6 +1,6 @@
 {
   "source_interface": "csindex index-perf(H20269)",
   "adjust": "无（指数）",
-  "fetch_date": "2026-09-24",
+  "fetch_date": "2026-09-25",
   "note": "全收益指数收盘（中证官网）；中证官网 index-perf；pe_ttm=peg 滚动市盈率（与 indicator.xls 口径略异）"
 }
