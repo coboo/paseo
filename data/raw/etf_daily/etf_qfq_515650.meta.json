@@ -1,6 +1,6 @@
 {
   "source_interface": "fund_etf_hist_em(515650)",
   "adjust": "qfq 前复权",
-  "fetch_date": "2026-11-04",
+  "fetch_date": "2026-11-05",
   "note": "ETF 前复权日线"
 }
